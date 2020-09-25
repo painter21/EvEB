@@ -1,0 +1,15 @@
+aufgabe: ratting
+vorgaben: 
+	schiff ist im system
+	schiff ist im ruhezustand
+ende bei
+	vollem inventar
+	beschädigte struktur (70%)
+	
+grober ablauf:
+calibrieren
+repeat
+suche anomalie
+clear anomalie
+loot anomalie
+
