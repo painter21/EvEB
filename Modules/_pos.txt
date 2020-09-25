@@ -1,0 +1,7 @@
+ArmorRepairModuleCruiser regen 38 24
+WebCruiser ifpossible 22 -6
+StabCruiser esc 13 13
+NosCruiser ifpossible 13 10
+DroneCruiser ifpossible 20 19
+Drone3Cruiser ignore 7 31
+RRailgunCruiser ignore 12 31

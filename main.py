@@ -9,9 +9,12 @@ from numpy import random
 from PIL import Image
 
 tess.pytesseract.tesseract_cmd = 'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe'
+
+# will be updated automatically -> calibrate()
 health_st = 100
 health_ar = 100
 health_sh = 100
+preferredOrbit = 21
 ModuleList = [None]
 
 # INIT
@@ -42,15 +45,24 @@ def update_cs():
 
 
 def calibrate():
-    # improve listing different modules (by available images?)
-
-    ar = cv.imread('Modules\ArmorRepairModule2.png')
-
-    result = cv.matchTemplate(CS, ar, cv.TM_CCORR_NORMED)
-
-    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    print('Best match armor rep: %s' % str(max_loc))
-    print('best match confidence: %s' % max_val)
+    file = open('Modules\_pos.txt')
+    tmp = file.readline()
+    while tmp != '':
+        tmp = tmp.split()
+        ar = cv.imread('Modules\\' + tmp[0] + '.png')
+        result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        if max_val > 0.99:
+            center = (max_loc[0] + int(tmp[2]), max_loc[1] + int(tmp[3]))
+            ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
+            # cv.circle(CS_cv, center, 40, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
+        else:
+            print(tmp[0] + ' not found: ')
+            print(max_val)
+        tmp = file.readline()
+    # cv.imshow('tmp', CS_cv)
+    # cv.waitKey()
+    print(ModuleList)
 
 
 def click_circle(x, y, r):
@@ -95,11 +107,7 @@ def update_hp():
 
 
 def main():
-    while 1:
-       update_cs()
-       update_hp()
-       print('----------')
-       time.sleep(0.5)
+    calibrate()
     # cropping
     # whole anos area crop_img = CSp[85:840, 1321:1524]
     y = 847
