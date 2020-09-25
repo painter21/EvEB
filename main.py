@@ -15,7 +15,7 @@ health_st = 100
 health_ar = 100
 health_sh = 100
 preferredOrbit = 21
-ModuleList = [None]
+ModuleList = []
 
 # INIT
 # connect to Bluestacks
@@ -62,7 +62,7 @@ def calibrate():
         tmp = file.readline()
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
-    print(ModuleList)
+    print(str(len(ModuleList)) + ' Modules found')
 
 
 def click_circle(x, y, r):
@@ -73,6 +73,12 @@ def click_circle(x, y, r):
 
     # great display:
     # https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.power.html#numpy.random.Generator.power
+
+
+def click_rectangle(x, y, xm, ym):
+    x = (xm - x) * np.random.default_rng().random() + x
+    y = (ym - y) * np.random.default_rng().random() + y
+    device.shell(f'input touchscreen tap {x} {y}')
 
 
 def update_hp_helper(r, off, offset):
@@ -106,8 +112,37 @@ def update_hp():
     # cv.waitKey(0)
 
 
+def swap_filter(string):
+    x, y, w, h = 1269, 10, 124, 53
+    crop_img = CS_image[y:y + h, x:x + w]
+    if string in tess.image_to_string(crop_img):
+        print('yes')
+        return
+    else:
+        print('todo')
+    cv.imshow('.', crop_img)
+    cv.waitKey()
+
+
+def warp_to_ano():
+    swap_filter('Ano')
+    # update_cs()
+
+    #check if window is on ano
+
+    #check there is an inquis/scout
+
+    #check if next would be a base
+
+    #warp to orbit distance
+
+    #wait warp to end
+
+    #swap to PvE
+
+
 def main():
-    calibrate()
+    warp_to_ano()
     # cropping
     # whole anos area crop_img = CSp[85:840, 1321:1524]
     y = 847
@@ -119,6 +154,7 @@ def main():
     # print(tess.image_to_string(crop_img))
     # cv.imshow('.', crop_img)
     # cv.waitKey()
+
 
 
 main()
