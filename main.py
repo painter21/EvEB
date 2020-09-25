@@ -70,15 +70,17 @@ def click_circle(x, y, r):
     angle = np.random.default_rng().random() * np.pi
     r = r - np.random.default_rng().power(a) * r
     device.shell(f'input touchscreen tap {np.cos(angle) * r + x} {np.sin(angle) * r + y}')
+    time.sleep(np.random.default_rng().random() * 0.1 + 0.2)
 
     # great display:
     # https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.power.html#numpy.random.Generator.power
 
 
-def click_rectangle(x, y, xm, ym):
-    x = (xm - x) * np.random.default_rng().random() + x
-    y = (ym - y) * np.random.default_rng().random() + y
+def click_rectangle(x, y, w, h):
+    x = w * np.random.default_rng().random() + x
+    y = h * np.random.default_rng().random() + y
     device.shell(f'input touchscreen tap {x} {y}')
+    time.sleep(np.random.default_rng().random() * 0.1 + 0.2)
 
 
 def update_hp_helper(r, off, offset):
@@ -91,7 +93,7 @@ def update_hp_helper(r, off, offset):
     while tmp < precision and not stop:
         angle = np.pi * (1.32 - 0.62 * tmp / precision)
         x = int(center_x + np.cos(angle) * r)
-        y = int(center_y + np.sin(angle) * r * factor_y - abs(10-abs(tmp-precision/2))/3 * off + offset)
+        y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) / 3 * off + offset)
         # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp*10), thickness=3, lineType=cv.LINE_4)
         if CS_image[y][x][2] > 90:
             print(int(100 - tmp / precision * 100))
@@ -105,40 +107,41 @@ def update_hp():
     r_st = 64
     r_ar = 80
     r_sh = 98
-    update_hp_helper(r_st, 1/2, -2)
+    update_hp_helper(r_st, 1 / 2, -2)
     update_hp_helper(r_ar, 1, 0)
-    update_hp_helper(r_sh, 1/3, 0)
+    update_hp_helper(r_sh, 1 / 3, 0)
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
 
 
 def swap_filter(string):
+    update_cs()
     x, y, w, h = 1269, 10, 124, 53
     crop_img = CS_image[y:y + h, x:x + w]
-    if string in tess.image_to_string(crop_img):
-        print('yes')
-        return
-    else:
-        print('todo')
-    cv.imshow('.', crop_img)
-    cv.waitKey()
+    if string not in tess.image_to_string(crop_img):
+        # TODO: improve
+        click_rectangle(x, y, w, h)
+        click_rectangle(x, 118, w, h)
+        swap_filter(string)
+    # cv.imshow('.', crop_img)
+    # cv.waitKey()
 
 
 def warp_to_ano():
     swap_filter('Ano')
     # update_cs()
 
-    #check if window is on ano
+    # check if window is on ano
 
-    #check there is an inquis/scout
+    # check there is an inquis/scout
 
-    #check if next would be a base
+    # check if next would be a base
 
-    #warp to orbit distance
+    # warp to orbit distance
 
-    #wait warp to end
+    # wait warp to end
 
-    #swap to PvE
+    # swap to PvE
 
 
 def main():
@@ -154,7 +157,6 @@ def main():
     # print(tess.image_to_string(crop_img))
     # cv.imshow('.', crop_img)
     # cv.waitKey()
-
 
 
 main()
