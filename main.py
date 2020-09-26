@@ -17,6 +17,7 @@ health_st = 100
 health_ar = 100
 health_sh = 100
 preferredOrbit = 23
+module_icon_radius = 40
 ModuleList = []
 
 # INIT
@@ -153,6 +154,15 @@ def update_hp():
     # cv.waitKey(0)
 
 
+def activate_Module(number):
+    # todo
+    # check if already active
+
+    # activate
+    module = ModuleList[number]
+    click_circle(module[2], module[3], module_icon_radius)
+
+
 def swap_filter(string_in_name):
     # swaps to a filter containing the given string
     update_cs()
@@ -162,7 +172,12 @@ def swap_filter(string_in_name):
     if string_in_name not in tess.image_to_string(crop_img):
         # TODO: improve
         click_rectangle(x, y, w, h)
-        click_rectangle(x, 118, w, h)
+        if string_in_name in 'Anomalies':
+            click_rectangle(x, 118, w, h)
+        if string_in_name in 'PvE':
+            click_rectangle(x, 206, w, h)
+        else:
+            print('todo swap filter')
         swap_filter(string_in_name)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
@@ -227,14 +242,27 @@ def wait_warp():
         wait_warp()
 
 
+def loot():
+    print('todo loot()')
+
+
 def combat():
+    swap_filter('PvE')
+    # players?
+    # activate standart modules
+    # check hp
+    update_hp()
+    # update targets
+    # update movement
+    # no enemys left? loot
+    # no loot left? end
     print('todo')
 
 
 def warp_to_ano():
     swap_filter('Ano')
     anomaly = get_good_anomaly()
-    if anomaly[0] == 'scout':
+    if anomaly == 'scout':
         playsound('alarm.wav')
         warp_to(0, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
     warp_to(preferredOrbit, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
@@ -245,9 +273,11 @@ def warp_to_ano():
 
 
 def main():
-    while 1:
-        warp_to_ano()
-        combat()
+    update_cs()
+    calibrate()
+    print(ModuleList)
+    # warp_to_ano()
+    combat()
 
 
 
