@@ -2,6 +2,8 @@ aufgabe: ratting
 vorgaben: 
 	schiff ist im system
 	schiff ist im ruhezustand
+	Rechtes Fenster offen
+
 ende bei
 	vollem inventar
 	beschädigte struktur (70%)
