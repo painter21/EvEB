@@ -13,5 +13,11 @@ calibrieren
 repeat
 suche anomalie
 clear anomalie
+
 loot anomalie
+
+[ 29  24  19 255]
+[206 253 240 255]
+[194 131 129 255]
+[ 29  24  19 255]
 

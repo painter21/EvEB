@@ -156,11 +156,15 @@ def update_hp():
 
 def activate_Module(number):
     # todo
-    # check if already active
-
-    # activate
     module = ModuleList[number]
-    click_circle(module[2], module[3], module_icon_radius)
+    # check if already active
+    x, y = module[2] + 2, module[3] - 40
+    print(CS_image[y][x])
+    cv.rectangle(CS_cv, (x, y), (x, y), (0, 0, 255), 2)
+    cv.imshow('.', CS_cv)
+    cv.waitKey()
+    # activate
+    # click_circle(module[2], module[3], module_icon_radius)
 
 
 def swap_filter(string_in_name):
@@ -273,11 +277,14 @@ def warp_to_ano():
 
 
 def main():
-    update_cs()
     calibrate()
     print(ModuleList)
+    while 1:
+        update_cs()
+        activate_Module(0)
+    #
     # warp_to_ano()
-    combat()
+    #combat()
 
 
 
