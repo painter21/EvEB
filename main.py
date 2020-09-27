@@ -63,6 +63,8 @@ def click_circle(x, y, r):
 def drag_from_circle(x, y, r, d):
     tmp = get_point_in_circle(x, y, r)
     x, y = tmp[0], tmp[1]
+    if d == 0:
+        device.shell(f'input touchscreen tap {x} {y}')
     angle = np.random.default_rng().random() * np.pi
     r = 130 + d*2.4
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
@@ -113,11 +115,26 @@ def get_speed():
     # cv.waitKey(0)
     return 100
 def activate_module(module):
+    if module[1] == 'drone':
+        x_off, y_off, w, h = -46, -43, 31, 30
+        x, y = module[2] + x_off, module[3] + y_off
+        img_target = cv.imread('assets\\drone_target.png')
+        crop_img = CS_cv[y:y + h, x:x + w]
+        result = cv.matchTemplate(crop_img, img_target, cv.TM_CCORR_NORMED)
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        if max_val < 0.95:
+            if random.random() > 0.5:
+                engage_enemy(0)
+                return 1
+            click_circle(module[2], module[3], module_icon_radius)
+        return 1
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
 
     if compare_colors(CS_image[y][x], activate_blue) > 0.15 and compare_colors(CS_image[y][x], activate_red) > 0.15:
         click_circle(module[2], module[3], module_icon_radius)
+        return 1
+    return 0
 def deactivate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
@@ -182,6 +199,7 @@ def get_good_anomaly():
         # Todo: i should improve that at some point
         x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
         if 'Scout' in raw_text or 'nquis' in raw_text:
+            playsound('bell.wav')
             return ['scout', 0, x_ano_field, y_ano_field, 310, 80]
         else:
             if 'Small' in raw_text:
@@ -261,6 +279,7 @@ def not_safe():
     #    return 1
     return 0
 def npc_enemies_count():
+    #todo: test for 10+ enemys
     swap_filter('PvE')
     x, y, w, h = 1547, 86, 18, 445
     as_icon = cv.imread('assets\\enemy_npc.png')
@@ -268,7 +287,34 @@ def npc_enemies_count():
     result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
     if max_val > 0.95:
-        return 1
+        y = max_loc[1] + y
+        x = max_loc[0] + 10 + x
+        h, w = 35, 25
+        crop_img = CS_cv[y:y + h, x:x + w]
+        blank_img = np.zeros((h, w * 2, 3), np.uint8)
+        line = 0
+        while line < h - 2:
+            row = 0
+            while row < w - 2:
+                brightness = 0
+                for color in crop_img[line][row]:
+                    brightness += color
+                    if brightness > 300:
+                        blank_img[line][row] = crop_img[line][row]
+                        blank_img[line][row + w - 10] = crop_img[line][row]
+                row += 1
+            line += 1
+        raw_text = tess.image_to_string(blank_img).strip()
+        import re
+        raw_text = re.sub('\D', '', raw_text)
+        tmp = 0
+        if int(len(raw_text)) == 0:
+            print('npc_enemy_count: guessed 2')
+            return 2
+        while tmp < int(len(raw_text)/2):
+            raw_text = raw_text[:-1]
+            tmp += 1
+        return int(raw_text)
     return 0
 def press_lock_button():
     x, y, w, h = 982, 555, 35, 35
@@ -284,9 +330,18 @@ def orbit_enemy(a):
     x_off = - 100
     click_circle(1118 + a * x_off, 65, module_icon_radius)
     click_rectangle(868 + a * x_off, 319, 308, 96)
+def engage_enemy(a):
+    x_off = - 100
+    click_circle(1118 + a * x_off, 65, module_icon_radius)
+    click_rectangle(868 + a * x_off, 416, 308, 96)
 
 # STATE FUNCTIONS
 def loot():
+    if npc_enemies_count():
+        combat()
+    print('site done')
+    warp_to_ano()
+    combat()
     print('todo loot()')
     # playsound('bell.wav')
 
@@ -301,7 +356,8 @@ def go_home():
 
 def combat():
     print('start combat')
-    tmp = time.time() - 10
+    tmp_lock = time.time()
+    tmp_weapon = time.time()
     last_npc_count = 0
     while 1:
         update_cs()
@@ -316,16 +372,25 @@ def combat():
 
         current_npc_count = npc_enemies_count()
         # no enemies
-        print(current_npc_count)
         if not current_npc_count:
             loot()
+            return
+        else:
+            # update targets
+            # todo: lock closer targets
+            if time.time() - tmp_lock > 0:
+                if press_lock_button():
+                    tmp_lock = time.time() + 7
+                    tmp_weapon = time.time() + 10
+            # check if weapons are online
+            if time.time() - tmp_weapon > 0:
+                for module in ModuleList:
+                    if module[1] == 'drone':
+                        # or weapon
+                        if activate_module(module):
+                            tmp_weapon = time.time() + 10
 
-        # update targets
-        # todo: lock closer targets
-        print('update targets')
-        if time.time() - tmp > 10:
-            if press_lock_button():
-                tmp = time.time()
+
 
         # activate standard modules, behavior
         if current_npc_count != last_npc_count:
@@ -354,6 +419,7 @@ def warp_to_ano():
 
 
 def main():
+    engage_enemy(2)
     calibrate()
     combat()
 
