@@ -93,6 +93,10 @@ def calibrate():
     print(str(len(ModuleList)) + ' Modules found')
 
 
+def compare_colors(a, b):
+    return (abs(a[0]-b[0])+abs(a[1]-b[1])+abs(a[2]-b[2])+abs(a[3]-b[3]))/255/4
+
+
 def get_point_in_circle(x, y, r):
     a = 3.  # shape
     angle = np.random.default_rng().random() * np.pi
@@ -154,17 +158,22 @@ def update_hp():
     # cv.waitKey(0)
 
 
-def activate_Module(number):
-    # todo
+def activate_module(number):
     module = ModuleList[number]
-    # check if already active
+    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
-    print(CS_image[y][x])
-    cv.rectangle(CS_cv, (x, y), (x, y), (0, 0, 255), 2)
-    cv.imshow('.', CS_cv)
-    cv.waitKey()
-    # activate
-    # click_circle(module[2], module[3], module_icon_radius)
+
+    if compare_colors(CS_image[y][x], activate_blue) > 0.15 and compare_colors(CS_image[y][x], activate_red) > 0.15:
+        click_circle(module[2], module[3], module_icon_radius)
+
+
+def deactivate_module(number):
+    module = ModuleList[number]
+    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
+    x, y = module[2] + 2, module[3] - 40
+
+    if compare_colors(CS_image[y][x], activate_blue) < 0.15:
+        click_circle(module[2], module[3], module_icon_radius)
 
 
 def swap_filter(string_in_name):
@@ -281,7 +290,8 @@ def main():
     print(ModuleList)
     while 1:
         update_cs()
-        activate_Module(0)
+        activate_module(0)
+        time.sleep(1)
     #
     # warp_to_ano()
     #combat()
