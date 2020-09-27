@@ -37,7 +37,7 @@ CS_image = np.array(CS_image, dtype=np.uint8)
 
 # BASIC FUNCTIONS
 def power_nap():
-    time.sleep(np.random.default_rng().random() * 0.1 + 0.2)
+    time.sleep(np.random.default_rng().random() * 0.3 + 0.3)
 def update_cs():
     global CS_cv, CS, CS_image
     CS = device.screencap()
@@ -152,8 +152,13 @@ def swap_filter(string_in_name):
         click_rectangle(x, y, w, h)
         if string_in_name in 'Anomalies':
             click_rectangle(x, 118, w, h)
+            return
         if string_in_name in 'PvE':
             click_rectangle(x, 206, w, h)
+            return
+        if string_in_name in 'esc':
+            click_rectangle(1291, 588, 136, 48)
+            return
         else:
             print('todo swap filter')
         swap_filter(string_in_name)
@@ -384,7 +389,9 @@ def loot():
 
 
 def flee():
-    print('todo flee')
+    swap_filter('esc')
+    click_rectangle(1210, 67, 314, 88)
+    click_rectangle(903, 168, 301, 91)
 
 
 def go_home():
@@ -458,8 +465,8 @@ def main():
     calibrate()
     combat()
 
-
-main()
+flee()
+# main()
 
 # CS = Image.open('screen.png')
 # CS = numpy.array(CS, dtype=numpy.uint8)
