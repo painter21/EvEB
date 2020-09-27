@@ -8,7 +8,6 @@ import pytesseract as tess
 from numpy import random
 from PIL import Image
 from playsound import playsound
-import string
 
 tess.pytesseract.tesseract_cmd = 'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe'
 
@@ -36,11 +35,9 @@ CS_cv = cv.imread('screen.png')
 CS_image = Image.open('screen.png')
 CS_image = np.array(CS_image, dtype=np.uint8)
 
-
+# BASIC FUNCTIONS
 def power_nap():
     time.sleep(np.random.default_rng().random() * 0.1 + 0.2)
-
-
 def update_cs():
     global CS_cv, CS, CS_image
     CS = device.screencap()
@@ -49,29 +46,34 @@ def update_cs():
     CS_cv = cv.imread('screen.png')
     CS_image = Image.open('screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
+def compare_colors(a, b):
+    return (abs(a[0]-b[0])+abs(a[1]-b[1])+abs(a[2]-b[2])+abs(a[3]-b[3]))/255/4
+def get_point_in_circle(x, y, r):
+    a = 3.  # shape
+    angle = np.random.default_rng().random() * np.pi
+    r = r - np.random.default_rng().power(a) * r
+    return np.cos(angle) * r + x, np.sin(angle) * r + y
+def click_circle(x, y, r):
+    tmp = get_point_in_circle(x, y, r)
+    device.shell(f'input touchscreen tap {tmp[0]} {tmp[1]}')
+    power_nap()
 
+    # great display:
+    # https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.power.html#numpy.random.Generator.power
+def drag_from_circle(x, y, r, d):
+    tmp = get_point_in_circle(x, y, r)
+    x, y = tmp[0], tmp[1]
+    angle = np.random.default_rng().random() * np.pi
+    r = 130 + d*2.4
+    device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
+    power_nap()
+def click_rectangle(x, y, w, h):
+    x = w * np.random.default_rng().random() + x
+    y = h * np.random.default_rng().random() + y
+    device.shell(f'input touchscreen tap {x} {y}')
+    power_nap()
 
-def get_speed():
-    tmp = 0
-    stop = 0
-    precision = 10
-    factor_y = 0.67
-    center_x = 800
-    center_y = 779
-    r = 82
-    while tmp < precision and not stop:
-        angle = np.pi * (0.65 - 0.32 * tmp / precision)
-        x = int(center_x + np.cos(angle) * r)
-        y = int(center_y + np.sin(angle) * r * factor_y)
-        # cv.rectangle(CS_cv, (x, y), (x, y), color=(tmp*10, 255, 0), thickness=int((22-tmp)/2), lineType=cv.LINE_4)
-        if CS_image[y][x][0] > 175:
-            return int(tmp / precision * 100)
-        tmp += 1
-    # cv.imshow('image', CS_cv)
-    # cv.waitKey(0)
-    return 100
-
-
+# HELPER FUNCTIONS
 def calibrate():
     file = open('modules\_pos.txt')
     tmp = file.readline()
@@ -91,91 +93,37 @@ def calibrate():
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
     print(str(len(ModuleList)) + ' Modules found')
-
-
-def compare_colors(a, b):
-    return (abs(a[0]-b[0])+abs(a[1]-b[1])+abs(a[2]-b[2])+abs(a[3]-b[3]))/255/4
-
-
-def get_point_in_circle(x, y, r):
-    a = 3.  # shape
-    angle = np.random.default_rng().random() * np.pi
-    r = r - np.random.default_rng().power(a) * r
-    return np.cos(angle) * r + x, np.sin(angle) * r + y
-
-
-def click_circle(x, y, r):
-    tmp = get_point_in_circle(x, y, r)
-    device.shell(f'input touchscreen tap {tmp[0]} {tmp[1]}')
-    power_nap()
-
-    # great display:
-    # https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.power.html#numpy.random.Generator.power
-
-
-def drag_from_circle(x, y, r, d):
-    tmp = get_point_in_circle(x, y, r)
-    x, y = tmp[0], tmp[1]
-    angle = np.random.default_rng().random() * np.pi
-    r = 130 + d*2.4
-    device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
-    power_nap()
-
-
-def click_rectangle(x, y, w, h):
-    x = w * np.random.default_rng().random() + x
-    y = h * np.random.default_rng().random() + y
-    device.shell(f'input touchscreen tap {x} {y}')
-    power_nap()
-
-
-def update_hp_helper(r, off, offset):
+def get_speed():
     tmp = 0
-    precision = 20
+    stop = 0
+    precision = 10
     factor_y = 0.67
     center_x = 800
     center_y = 779
-    while tmp < precision:
-        angle = np.pi * (1.32 - 0.62 * tmp / precision)
+    r = 82
+    while tmp < precision and not stop:
+        angle = np.pi * (0.65 - 0.32 * tmp / precision)
         x = int(center_x + np.cos(angle) * r)
-        y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) / 3 * off + offset)
-        # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp*10), thickness=3, lineType=cv.LINE_4)
-        if CS_image[y][x][2] > 90:
-            return int(100 - tmp / precision * 100)
+        y = int(center_y + np.sin(angle) * r * factor_y)
+        # cv.rectangle(CS_cv, (x, y), (x, y), color=(tmp*10, 255, 0), thickness=int((22-tmp)/2), lineType=cv.LINE_4)
+        if CS_image[y][x][0] > 175:
+            return int(tmp / precision * 100)
         tmp += 1
-    return 0
-
-
-def update_hp():
-    r_st = 64
-    r_ar = 80
-    r_sh = 98
-    global health_sh, health_ar, health_st
-    health_st = update_hp_helper(r_st, 1 / 2, -2)
-    health_ar = update_hp_helper(r_ar, 1, 0)
-    health_sh = update_hp_helper(r_sh, 1 / 3, 0)
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
-
-
-def activate_module(number):
-    module = ModuleList[number]
+    return 100
+def activate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
 
     if compare_colors(CS_image[y][x], activate_blue) > 0.15 and compare_colors(CS_image[y][x], activate_red) > 0.15:
         click_circle(module[2], module[3], module_icon_radius)
-
-
-def deactivate_module(number):
-    module = ModuleList[number]
+def deactivate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
 
     if compare_colors(CS_image[y][x], activate_blue) < 0.15:
         click_circle(module[2], module[3], module_icon_radius)
-
-
 def swap_filter(string_in_name):
     # swaps to a filter containing the given string
     update_cs()
@@ -194,14 +142,20 @@ def swap_filter(string_in_name):
         swap_filter(string_in_name)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
-
-
+def get_player_thread():
+    swap_filter('PvE')
+    x, y, w, h = 1547, 86, 18, 445
+    as_icon = cv.imread('assets\\all_ships_icon.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
+    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+    if max_val > 0.999:
+        return 1
+    return 0
 def warp_to(distance, x, y, w, h):
     # x and y must be the upper left corner of the warp object
     click_rectangle(x, y, w, h)
     drag_from_circle(x - 173, y + 146, 40, distance)
-
-
 def get_good_anomaly():
     # click filter element to expand filter
     click_rectangle(1214, 247, 308, 249)
@@ -211,7 +165,7 @@ def get_good_anomaly():
 
     # create a list of all anomaly locations (on screen)
     x, y, w, h = 1210, 0, 30, 900
-    img_ano = cv.imread('icons\\Ano.png')
+    img_ano = cv.imread('assets\\Ano.png')
     crop_img = CS_cv[y:y + h, x:x + w]
     result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
     threshold = 0.95
@@ -246,30 +200,142 @@ def get_good_anomaly():
     if len(list_ano) > 1:
         return list_ano[1]
     return list_ano[0]
-
-
 def wait_warp():
     # does nothing until speed bar goes to 15%
     update_cs()
     if get_speed() > 15:
         wait_warp()
+def update_hp_helper(r, off, offset):
+    tmp = 0
+    precision = 20
+    factor_y = 0.67
+    center_x = 800
+    center_y = 779
+    while tmp < precision:
+        angle = np.pi * (1.32 - 0.62 * tmp / precision)
+        x = int(center_x + np.cos(angle) * r)
+        y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) / 3 * off + offset)
+        # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp*10), thickness=3, lineType=cv.LINE_4)
+        if CS_image[y][x][2] > 90:
+            return int(100 - tmp / precision * 100)
+        tmp += 1
+    return 0
+def update_hp():
+    r_st = 64
+    r_ar = 80
+    r_sh = 98
+    global health_sh, health_ar, health_st
+    health_st = update_hp_helper(r_st, 1 / 2, -2)
+    health_ar = update_hp_helper(r_ar, 1, 0)
+    health_sh = update_hp_helper(r_sh, 1 / 3, 0)
+    # cv.imshow('image', CS_cv)
+    # cv.waitKey(0)
+def get_cargo():
+    print('todo cargocheck')
+def repair():
+    # todo not tested
+    update_hp()
+    armor_turn, shield_turn = 0, 0
+    if health_ar < 70:
+        armor_turn = 1
+    if health_sh < 70:
+        shield_turn = 1
+    for module in ModuleList:
+        if module[1] == 'ar_regen':
+            if armor_turn:
+                activate_module(module)
+            else:
+                deactivate_module(module)
+        if module[1] == 'sh_regen':
+            if shield_turn:
+                activate_module(module)
+            else:
+                deactivate_module(module)
+def not_safe():
+    if health_st < 70:
+        flee()
+        go_home()
+        return 1
+    if get_player_thread():
+        flee()
+        return 1
+    return 0
+def npc_enemies_count():
+    swap_filter('PvE')
+    x, y, w, h = 1547, 86, 18, 445
+    as_icon = cv.imread('assets\\enemy_npc.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
+    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+    if max_val > 0.95:
+        return 1
+    return 0
+def press_lock_button():
+    x, y, w, h = 982, 555, 35, 35
+    as_icon = cv.imread('assets\\target_button.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
+    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+    print(max_val)
+    if max_val > 0.95:
+        return 1
+    return 0
+def orbit_enemy(a):
+    x_off = - 100
+    click_circle(1118 + a * x_off, 65, module_icon_radius)
+    click_rectangle(868 + a * x_off, 319, 308, 96)
 
-
+# STATE FUNCTIONS
 def loot():
     print('todo loot()')
+    playsound('bell.wav')
+
+
+def flee():
+    print('todo flee')
+
+
+def go_home():
+    print('todo go_home')
 
 
 def combat():
-    swap_filter('PvE')
-    # players?
-    # activate standart modules
-    # check hp
-    update_hp()
-    # update targets
-    # update movement
-    # no enemys left? loot
-    # no loot left? end
-    print('todo')
+    print('start combat')
+    tmp = time.time() - 10
+    last_npc_count = 0
+    while 1:
+        update_cs()
+        update_hp()
+
+        # players, hull dmg?
+        not_safe()
+        swap_filter('PvE')
+
+        # check hp
+        repair()
+
+        current_npc_count = npc_enemies_count()
+        # no enemies
+        if not current_npc_count:
+            loot()
+
+        # update targets
+        # todo: lock closer targets
+        if time.time() - tmp > 10:
+            if press_lock_button():
+                tmp = time.time()
+
+        # activate standard modules, behavior
+        if current_npc_count != last_npc_count:
+            orbit_enemy(0)
+            last_npc_count = current_npc_count
+            #todo react to close enemys, nos, web, etc
+        # for module in ModuleList:
+        #    if module[1] == 'ifpossible':
+        #        activate_module(module)
+
+        # update movement
+        # no enemys left? loot
 
 
 def warp_to_ano():
@@ -287,15 +353,8 @@ def warp_to_ano():
 
 def main():
     calibrate()
-    print(ModuleList)
-    while 1:
-        update_cs()
-        activate_module(0)
-        time.sleep(1)
-    #
-    # warp_to_ano()
-    #combat()
-
+    warp_to_ano()
+    combat()
 
 
 main()
