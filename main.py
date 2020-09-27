@@ -157,6 +157,7 @@ def warp_to(distance, x, y, w, h):
     click_rectangle(x, y, w, h)
     drag_from_circle(x - 173, y + 146, 40, distance)
 def get_good_anomaly():
+    # todo: ignore closest ano
     # click filter element to expand filter
     click_rectangle(1214, 247, 308, 249)
     list_ano = []
@@ -180,9 +181,8 @@ def get_good_anomaly():
 
         # Todo: i should improve that at some point
         x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
-        if 'Scout' in raw_text or 'Inquis' in raw_text:
-            list_ano = []
-            return list_ano.append(['scout', 0, x_ano_field, y_ano_field, 310, 80])
+        if 'Scout' in raw_text or 'nquis' in raw_text:
+            return ['scout', 0, x_ano_field, y_ano_field, 310, 80]
         else:
             if 'Small' in raw_text:
                 list_ano.append(['small', 0, x_ano_field, y_ano_field, 310, 80])
@@ -256,9 +256,9 @@ def not_safe():
         flee()
         go_home()
         return 1
-    if get_player_thread():
-        flee()
-        return 1
+    # if get_player_thread():
+    #    flee()
+    #    return 1
     return 0
 def npc_enemies_count():
     swap_filter('PvE')
@@ -276,8 +276,8 @@ def press_lock_button():
     crop_img = CS_cv[y:y + h, x:x + w]
     result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    print(max_val)
     if max_val > 0.95:
+        click_circle(x + w/2, y + h/2, 25)
         return 1
     return 0
 def orbit_enemy(a):
@@ -288,7 +288,7 @@ def orbit_enemy(a):
 # STATE FUNCTIONS
 def loot():
     print('todo loot()')
-    playsound('bell.wav')
+    # playsound('bell.wav')
 
 
 def flee():
@@ -316,11 +316,13 @@ def combat():
 
         current_npc_count = npc_enemies_count()
         # no enemies
+        print(current_npc_count)
         if not current_npc_count:
             loot()
 
         # update targets
         # todo: lock closer targets
+        print('update targets')
         if time.time() - tmp > 10:
             if press_lock_button():
                 tmp = time.time()
@@ -353,7 +355,6 @@ def warp_to_ano():
 
 def main():
     calibrate()
-    warp_to_ano()
     combat()
 
 
