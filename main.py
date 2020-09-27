@@ -215,7 +215,7 @@ def get_good_anomaly():
         # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
     # cv.imshow('.', CS_cv)
     # cv.waitKey()
-    if len(list_ano) > 1:
+    if list_ano[0][3] < 155:
         return list_ano[1]
     return list_ano[0]
 def wait_warp():
@@ -250,13 +250,13 @@ def update_hp():
     # cv.waitKey(0)
 def get_cargo():
     print('todo cargocheck')
-def repair():
+def repair(desired_hp):
     # todo not tested
     update_hp()
     armor_turn, shield_turn = 0, 0
-    if health_ar < 70:
+    if health_ar < desired_hp:
         armor_turn = 1
-    if health_sh < 70:
+    if health_sh < desired_hp:
         shield_turn = 1
     for module in ModuleList:
         if module[1] == 'ar_regen':
@@ -337,11 +337,48 @@ def engage_enemy(a):
 
 # STATE FUNCTIONS
 def loot():
-    if npc_enemies_count():
-        combat()
+    # swap to container view
+    swap_filter('PvE')
+    x, y, w, h = 1547, 86, 18, 445
+    wreck_icon = cv.imread('assets\\wreck.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    result = cv.matchTemplate(crop_img, wreck_icon, cv.TM_CCORR_NORMED)
+    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+    if max_val > 0.95:
+        click_circle(max_loc[0] + x + 5, max_loc[1] + y + 7, 15)
+        while 1:
+            # behavior
+            update_cs()
+            repair(100)
+            not_safe()
+            if npc_enemies_count():
+                combat()
+                return
+            # still containers left?
+            waiting_time = 10
+            # todo: cargo full - go home
+            crop_img = CS_cv[y:y + h, x:x + w]
+            result = cv.matchTemplate(crop_img, wreck_icon, cv.TM_CCORR_NORMED)
+            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+            if max_val > 0.95:
+                click_rectangle(1210, 67, 314, 88)
+                click_rectangle(903, 168, 301, 91)
+                for i in range(waiting_time):
+                    update_cs()
+                    if CS_image[772][600][1] > 85:
+                        click_rectangle(393, 736, 322, 85)
+                        update_cs()
+                        break
+                    not_safe()
+                    repair(100)
+                    time.sleep(1)
+                waiting_time *= 3
+            else:
+                break
     print('site done')
     warp_to_ano()
     combat()
+    return
     print('todo loot()')
     # playsound('bell.wav')
 
@@ -368,30 +405,29 @@ def combat():
         swap_filter('PvE')
 
         # check hp
-        repair()
+        repair(70)
 
         current_npc_count = npc_enemies_count()
         # no enemies
         if not current_npc_count:
-            loot()
-            return
-        else:
-            # update targets
-            # todo: lock closer targets
-            if time.time() - tmp_lock > 0:
-                if press_lock_button():
-                    tmp_lock = time.time() + 7
-                    tmp_weapon = time.time() + 10
-            # check if weapons are online
-            if time.time() - tmp_weapon > 0:
-                for module in ModuleList:
-                    if module[1] == 'drone':
-                        # or weapon
-                        if activate_module(module):
-                            tmp_weapon = time.time() + 10
-
-
-
+            time.sleep(2)
+            update_cs()
+            if not current_npc_count:
+                loot()
+                return
+        # update targets
+        # todo: lock closer targets
+        if time.time() - tmp_lock > 0:
+            if press_lock_button():
+                tmp_lock = time.time() + 7
+                tmp_weapon = time.time() + 10
+        # check if weapons are online
+        if time.time() - tmp_weapon > 0:
+            for module in ModuleList:
+                if module[1] == 'drone':
+                    # or weapon
+                    if activate_module(module):
+                        tmp_weapon = time.time() + 10
         # activate standard modules, behavior
         if current_npc_count != last_npc_count:
             orbit_enemy(0)
@@ -419,7 +455,6 @@ def warp_to_ano():
 
 
 def main():
-    engage_enemy(2)
     calibrate()
     combat()
 
