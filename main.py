@@ -245,7 +245,8 @@ def get_list_anomaly():
                 x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
                 if 'Scout' in raw_text or 'nquis' in raw_text:
                     playsound('bell.wav')
-                    return ['scout', lvl, x_ano_field, y_ano_field, 310, 80]
+                    list_ano = [['scout', lvl, x_ano_field, y_ano_field, 310, 80]]
+                    return list_ano
                 else:
                     if 'Small' in raw_text:
                         list_ano.append(['small', lvl, x_ano_field, y_ano_field, 310, 80])
@@ -265,6 +266,20 @@ def get_list_anomaly():
     for ano in list_ano:
         print(ano)
     return list_ano
+def search_new_system():
+    print('todo search_new_system()')
+    quit()
+def choose_anomaly():
+    # todo
+    ano_list = get_list_anomaly()
+    if len(ano_list) == 0:
+        print('system empty')
+        search_new_system()
+        quit()
+    for ano in ano_list:
+        if ano[1] == 6 or ano[1] == 5:
+            return ano
+    return ano_list[0]
 def wait_warp():
     # does nothing until speed bar goes to 15%
     update_cs()
@@ -430,6 +445,9 @@ def flee():
     swap_filter('esc')
     click_rectangle(1210, 67, 314, 88)
     click_rectangle(903, 168, 301, 91)
+    for module in ModuleList:
+        if module[1] == 'esc':
+            activate_module(module)
 
 
 def go_home():
@@ -488,7 +506,7 @@ def combat():
 
 def warp_to_ano():
     swap_filter('Ano')
-    anomaly = get_good_anomaly()
+    anomaly = choose_anomaly()
     if anomaly == 'scout':
         playsound('alarm.wav')
         warp_to(0, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
@@ -500,8 +518,8 @@ def warp_to_ano():
 
 
 def main():
-    get_list_anomaly()
-
+    choose_anomaly()
+    combat()
 main()
 
 # CS = Image.open('screen.png')
