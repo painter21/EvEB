@@ -179,7 +179,8 @@ def warp_to(distance, x, y, w, h):
     # x and y must be the upper left corner of the warp object
     click_rectangle(x, y, w, h)
     drag_from_circle(x - 173, y + 146, 40, distance)
-def get_good_anomaly():
+def get_list_anomaly():
+    swap_filter('Ano')
     # todo: ignore closest ano
     # click filter element to expand filter
     click_rectangle(1214, 247, 308, 249)
@@ -192,66 +193,78 @@ def get_good_anomaly():
     img_ano = cv.imread('assets\\Ano.png')
     crop_img = CS_cv[y:y + h, x:x + w]
     result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
-    threshold = 0.95
+    threshold = 0.93
     loc = np.where(result >= threshold)
-
     # black magic do not touch
+    previous_point_y = 0
+    first_run = 1
     for pt in zip(*loc[::-1]):
-        # icon offset, size of text field
-        y_text, x_text = pt[1] - 13, pt[0] + 107 + x
-        crop_img = CS_cv[y_text:y_text + 52, x_text:x_text + 204]
-
-        # find the level of the anomaly
-        # find icon
-        crop_ano_level_img = CS_cv[y_text + 3:y_text + 18, x_text:x_text + 16]
-        # remove darker pixels
-        row_count = -1
-        for row in crop_ano_level_img:
-            row_count += 1
-            pixel_count = -1
-            for pixel in row:
-                pixel_count += 1
-                brightness = 0
-                for color in pixel:
-                    brightness += color
-                if brightness < 300:
-                    crop_ano_level_img[row_count][pixel_count] = [0, 0, 0]
-        # compare it to all icon files
-        highest_result = 0
-        lvl = 0
-        for file in os.listdir('assets\\base_level'):
-            lvl_icon = cv.imread(file)
-            result = cv.matchTemplate(crop_img, lvl_icon, cv.TM_CCORR_NORMED)
-            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-            if highest_result < max_val:
-                highest_result = max_val
-                lvl = int(file[:-4])
-
-        raw_text = tess.image_to_string(crop_img)
-
-        # Todo: i should improve that at some point
-        x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
-        if 'Scout' in raw_text or 'nquis' in raw_text:
-            playsound('bell.wav')
-            return ['scout', lvl, x_ano_field, y_ano_field, 310, 80]
-        else:
-            if 'Small' in raw_text:
-                list_ano.append(['small', lvl, x_ano_field, y_ano_field, 310, 80])
+        # ignore double results
+        if pt[1] > previous_point_y + 10:
+            previous_point_y = pt[1]
+            if first_run == 1:
+                first_run = 0
             else:
-                if 'Medium' in raw_text:
-                    list_ano.append(['medium', lvl, x_ano_field, y_ano_field, 310, 80])
-                    if 'Large' in raw_text:
-                        list_ano.append(['large', lvl, x_ano_field, y_ano_field, 310, 80])
-                        # if 'Base' in raw_text:
-                        #    list_ano.append(['base', 0, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
-        # icon cv.rectangle(crop_img, pt, (pt[0] + 15, pt[1] + 15), (0, 0, 255), 2)
-        # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
-    # cv.imshow('.', CS_cv)
-    # cv.waitKey()
-    print(list_ano)
-    if list_ano[0][3] < 155:
-        return list_ano[1]
-    return list_ano[0]
+
+                # icon offset, size of text field
+                y_text, x_text = pt[1] - 13, pt[0] + 107 + x
+                crop_img = CS_cv[y_text:y_text + 52, x_text:x_text + 204]
+
+                # find the level of the anomaly
+                # find icon
+                crop_ano_level_img = CS_cv[y_text + 3:y_text + 28, x_text:x_text + 13]
+                # remove darker pixels
+                row_count = -1
+                for row in crop_ano_level_img:
+                    row_count += 1
+                    pixel_count = -1
+                    for pixel in row:
+                        pixel_count += 1
+                        brightness = 0
+                        for color in pixel:
+                            brightness += color
+                        if brightness < 250:
+                            crop_ano_level_img[row_count][pixel_count] = [0, 0, 0]
+                # cv.imwrite('tmp.png', crop_ano_level_img)
+
+                # compare it to all icon files
+                highest_result = 0
+                lvl = 0
+                for file in os.listdir('assets\\base_level'):
+                    lvl_icon = cv.imread('assets\\base_level\\' + file)
+                    cv.waitKey()
+                    result = cv.matchTemplate(crop_ano_level_img, lvl_icon, cv.TM_CCORR_NORMED)
+                    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+                    if highest_result < max_val:
+                        highest_result = max_val
+                        lvl = int(file[:-4])
+
+                raw_text = tess.image_to_string(crop_img)
+
+                # Todo: i should improve that at some point
+                x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
+                if 'Scout' in raw_text or 'nquis' in raw_text:
+                    playsound('bell.wav')
+                    return ['scout', lvl, x_ano_field, y_ano_field, 310, 80]
+                else:
+                    if 'Small' in raw_text:
+                        list_ano.append(['small', lvl, x_ano_field, y_ano_field, 310, 80])
+                    else:
+                        if 'Medium' in raw_text:
+                            list_ano.append(['medium', lvl, x_ano_field, y_ano_field, 310, 80])
+                        else:
+                            if 'Large' in raw_text:
+                                list_ano.append(['large', lvl, x_ano_field, y_ano_field, 310, 80])
+                            else:
+                                if 'Base' in raw_text:
+                                    list_ano.append(['base', lvl, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
+                # icon cv.rectangle(crop_img, pt, (pt[0] + 15, pt[1] + 15), (0, 0, 255), 2)
+                # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
+            # cv.imshow('.', CS_cv)
+            # cv.waitKey()
+    for ano in list_ano:
+        print(ano)
+    return list_ano
 def wait_warp():
     # does nothing until speed bar goes to 15%
     update_cs()
@@ -487,7 +500,7 @@ def warp_to_ano():
 
 
 def main():
-    get_good_anomaly()
+    get_list_anomaly()
 
 main()
 
