@@ -259,13 +259,13 @@ def update_hp():
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
 def not_safe():
-    if health_st < 70:
+    if health_st < 90:
         flee()
         go_home()
+        playsound('bell.wav')
         return 1
     # if get_player_thread():
-    #    flee()
-    #    return 1
+        return 1
     return 0
 def npc_enemies_count():
     # todo: test for 10+ enemys
@@ -465,10 +465,11 @@ def loot():
 def go_home():
     print('todo go_home')
 def combat():
-    print('start combat')
+    print('combat')
     tmp_lock = time.time()
     tmp_weapon = time.time()
     last_npc_count = 0
+    count_console = 0
     while 1:
         update_cs()
         update_hp()
@@ -478,7 +479,7 @@ def combat():
         swap_filter('PvE')
 
         # check hp
-        repair(70)
+        repair(85)
 
         current_npc_count = npc_enemies_count()
         # no enemies
@@ -518,7 +519,7 @@ def solve_scouts():
 
 
 def main():
-    choose_anomaly()
+    calibrate()
     combat()
 main()
 
