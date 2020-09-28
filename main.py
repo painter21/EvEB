@@ -76,7 +76,7 @@ def click_rectangle(x, y, w, h):
     device.shell(f'input touchscreen tap {x} {y}')
     power_nap()
 
-# HELPER FUNCTIONS
+# INTERNAL HELPER FUNCTIONS
 def calibrate():
     file = open('modules\_pos.txt')
     tmp = file.readline()
@@ -115,56 +115,6 @@ def get_speed():
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
     return 100
-def activate_module(module):
-    if module[1] == 'drone':
-        x_off, y_off, w, h = -46, -43, 31, 30
-        x, y = module[2] + x_off, module[3] + y_off
-        img_target = cv.imread('assets\\drone_target.png')
-        crop_img = CS_cv[y:y + h, x:x + w]
-        result = cv.matchTemplate(crop_img, img_target, cv.TM_CCORR_NORMED)
-        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-        if max_val < 0.95:
-            if random.random() > 0.5:
-                engage_enemy(0)
-                return 1
-            click_circle(module[2], module[3], module_icon_radius)
-        return 1
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
-    x, y = module[2] + 2, module[3] - 40
-
-    if compare_colors(CS_image[y][x], activate_blue) > 0.15 and compare_colors(CS_image[y][x], activate_red) > 0.15:
-        click_circle(module[2], module[3], module_icon_radius)
-        return 1
-    return 0
-def deactivate_module(module):
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
-    x, y = module[2] + 2, module[3] - 40
-
-    if compare_colors(CS_image[y][x], activate_blue) < 0.15:
-        click_circle(module[2], module[3], module_icon_radius)
-def swap_filter(string_in_name):
-    # swaps to a filter containing the given string
-    update_cs()
-    # Filter Header, use the cv.imshow to see if it fits
-    x, y, w, h = 1269, 10, 124, 53
-    crop_img = CS_image[y:y + h, x:x + w]
-    if string_in_name not in tess.image_to_string(crop_img):
-        # TODO: improve
-        click_rectangle(x, y, w, h)
-        if string_in_name in 'Anomalies':
-            click_rectangle(x, 118, w, h)
-            return
-        if string_in_name in 'PvE':
-            click_rectangle(x, 206, w, h)
-            return
-        if string_in_name in 'esc':
-            click_rectangle(1291, 588, 136, 48)
-            return
-        else:
-            print('todo swap filter')
-        swap_filter(string_in_name)
-    # cv.imshow('.', crop_img)
-    # cv.waitKey()
 def get_player_thread():
     swap_filter('PvE')
     x, y, w, h = 1547, 86, 18, 445
@@ -175,10 +125,6 @@ def get_player_thread():
     if max_val > 0.999:
         return 1
     return 0
-def warp_to(distance, x, y, w, h):
-    # x and y must be the upper left corner of the warp object
-    click_rectangle(x, y, w, h)
-    drag_from_circle(x - 173, y + 146, 40, distance)
 def get_list_anomaly():
     swap_filter('Ano')
     # todo: ignore closest ano
@@ -244,9 +190,7 @@ def get_list_anomaly():
                 # Todo: i should improve that at some point
                 x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
                 if 'Scout' in raw_text or 'nquis' in raw_text:
-                    playsound('bell.wav')
-                    list_ano = [['scout', lvl, x_ano_field, y_ano_field, 310, 80]]
-                    return list_ano
+                    list_ano.append(['scout', lvl, x_ano_field, y_ano_field, 310, 80])
                 else:
                     if 'Small' in raw_text:
                         list_ano.append(['small', lvl, x_ano_field, y_ano_field, 310, 80])
@@ -276,6 +220,10 @@ def choose_anomaly():
         print('system empty')
         search_new_system()
         quit()
+    for ano in ano_list:
+        if ano[0] == 'scout':
+            playsound('bell.wav')
+            return ano
     for ano in ano_list:
         if ano[1] == 6 or ano[1] == 5:
             return ano
@@ -310,25 +258,6 @@ def update_hp():
     health_sh = update_hp_helper(r_sh, 1 / 3, 0)
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
-def repair(desired_hp):
-    # todo not tested
-    update_hp()
-    armor_turn, shield_turn = 0, 0
-    if health_ar < desired_hp:
-        armor_turn = 1
-    if health_sh < desired_hp:
-        shield_turn = 1
-    for module in ModuleList:
-        if module[1] == 'ar_regen':
-            if armor_turn:
-                activate_module(module)
-            else:
-                deactivate_module(module)
-        if module[1] == 'sh_regen':
-            if shield_turn:
-                activate_module(module)
-            else:
-                deactivate_module(module)
 def not_safe():
     if health_st < 70:
         flee()
@@ -376,6 +305,19 @@ def npc_enemies_count():
             tmp += 1
         return int(raw_text)
     return 0
+def warp_to_ano():
+    swap_filter('Ano')
+    anomaly = choose_anomaly()
+    if anomaly == 'scout':
+        warp_to(0, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
+        solve_scouts()
+    warp_to(preferredOrbit, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
+    time.sleep(10)
+    wait_warp()
+
+    # swap to PvE
+
+# INTERFACE HELPER FUNCTIONS
 def press_lock_button():
     x, y, w, h = 982, 555, 35, 35
     as_icon = cv.imread('assets\\target_button.png')
@@ -386,6 +328,86 @@ def press_lock_button():
         click_circle(x + w/2, y + h/2, 25)
         return 1
     return 0
+def warp_to(distance, x, y, w, h):
+    # x and y must be the upper left corner of the warp object
+    click_rectangle(x, y, w, h)
+    drag_from_circle(x - 173, y + 146, 40, distance)
+def swap_filter(string_in_name):
+    # swaps to a filter containing the given string
+    update_cs()
+    # Filter Header, use the cv.imshow to see if it fits
+    x, y, w, h = 1269, 10, 124, 53
+    crop_img = CS_image[y:y + h, x:x + w]
+    if string_in_name not in tess.image_to_string(crop_img):
+        # TODO: improve
+        click_rectangle(x, y, w, h)
+        if string_in_name in 'Anomalies':
+            click_rectangle(x, 118, w, h)
+            return
+        if string_in_name in 'PvE':
+            click_rectangle(x, 206, w, h)
+            return
+        if string_in_name in 'esc':
+            click_rectangle(1291, 588, 136, 48)
+            return
+        else:
+            print('todo swap filter')
+        swap_filter(string_in_name)
+    # cv.imshow('.', crop_img)
+    # cv.waitKey()
+def activate_module(module):
+    if module[1] == 'drone':
+        x_off, y_off, w, h = -46, -43, 31, 30
+        x, y = module[2] + x_off, module[3] + y_off
+        img_target = cv.imread('assets\\drone_target.png')
+        crop_img = CS_cv[y:y + h, x:x + w]
+        result = cv.matchTemplate(crop_img, img_target, cv.TM_CCORR_NORMED)
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        if max_val < 0.95:
+            if random.random() > 0.5:
+                engage_enemy(0)
+                return 1
+            click_circle(module[2], module[3], module_icon_radius)
+        return 1
+    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
+    x, y = module[2] + 2, module[3] - 40
+
+    if compare_colors(CS_image[y][x], activate_blue) > 0.15 and compare_colors(CS_image[y][x], activate_red) > 0.15:
+        click_circle(module[2], module[3], module_icon_radius)
+        return 1
+    return 0
+def deactivate_module(module):
+    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
+    x, y = module[2] + 2, module[3] - 40
+
+    if compare_colors(CS_image[y][x], activate_blue) < 0.15:
+        click_circle(module[2], module[3], module_icon_radius)
+def repair(desired_hp):
+    # todo not tested
+    update_hp()
+    armor_turn, shield_turn = 0, 0
+    if health_ar < desired_hp:
+        armor_turn = 1
+    if health_sh < desired_hp:
+        shield_turn = 1
+    for module in ModuleList:
+        if module[1] == 'ar_regen':
+            if armor_turn:
+                activate_module(module)
+            else:
+                deactivate_module(module)
+        if module[1] == 'sh_regen':
+            if shield_turn:
+                activate_module(module)
+            else:
+                deactivate_module(module)
+def flee():
+    swap_filter('esc')
+    click_rectangle(1210, 67, 314, 88)
+    click_rectangle(903, 168, 301, 91)
+    for module in ModuleList:
+        if module[1] == 'esc':
+            activate_module(module)
 def orbit_enemy(a):
     x_off = - 100
     click_circle(1118 + a * x_off, 65, module_icon_radius)
@@ -395,7 +417,8 @@ def engage_enemy(a):
     click_circle(1118 + a * x_off, 65, module_icon_radius)
     click_rectangle(868 + a * x_off, 416, 308, 96)
 
-# STATE FUNCTIONS
+
+# STATES
 def loot():
     # swap to container view
     swap_filter('PvE')
@@ -439,21 +462,8 @@ def loot():
     warp_to_ano()
     combat()
     return
-
-
-def flee():
-    swap_filter('esc')
-    click_rectangle(1210, 67, 314, 88)
-    click_rectangle(903, 168, 301, 91)
-    for module in ModuleList:
-        if module[1] == 'esc':
-            activate_module(module)
-
-
 def go_home():
     print('todo go_home')
-
-
 def combat():
     print('start combat')
     tmp_lock = time.time()
@@ -502,19 +512,9 @@ def combat():
 
         # update movement
         # no enemys left? loot
-
-
-def warp_to_ano():
-    swap_filter('Ano')
-    anomaly = choose_anomaly()
-    if anomaly == 'scout':
-        playsound('alarm.wav')
-        warp_to(0, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
-    warp_to(preferredOrbit, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
-    time.sleep(10)
-    wait_warp()
-
-    # swap to PvE
+def solve_scouts():
+    print('todo: solve_scouts')
+    quit()
 
 
 def main():
