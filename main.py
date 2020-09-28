@@ -8,6 +8,7 @@ import pytesseract as tess
 from numpy import random
 from PIL import Image
 from playsound import playsound
+import os
 
 tess.pytesseract.tesseract_cmd = 'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe'
 
@@ -15,7 +16,7 @@ tess.pytesseract.tesseract_cmd = 'C:\\Program Files (x86)\\Tesseract-OCR\\tesser
 health_st = 100
 health_ar = 100
 health_sh = 100
-preferredOrbit = 23
+preferredOrbit = 10
 module_icon_radius = 40
 ModuleList = []
 
@@ -41,8 +42,8 @@ def power_nap():
 def update_cs():
     global CS_cv, CS, CS_image
     CS = device.screencap()
-    with open('screen.png', 'wb') as f:
-        f.write(CS)
+    with open('screen.png', 'wb') as g:
+        g.write(CS)
     CS_cv = cv.imread('screen.png')
     CS_image = Image.open('screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
@@ -199,27 +200,55 @@ def get_good_anomaly():
         # icon offset, size of text field
         y_text, x_text = pt[1] - 13, pt[0] + 107 + x
         crop_img = CS_cv[y_text:y_text + 52, x_text:x_text + 204]
+
+        # find the level of the anomaly
+        # find icon
+        crop_ano_level_img = CS_cv[y_text + 3:y_text + 18, x_text:x_text + 16]
+        # remove darker pixels
+        row_count = -1
+        for row in crop_ano_level_img:
+            row_count += 1
+            pixel_count = -1
+            for pixel in row:
+                pixel_count += 1
+                brightness = 0
+                for color in pixel:
+                    brightness += color
+                if brightness < 300:
+                    crop_ano_level_img[row_count][pixel_count] = [0, 0, 0]
+        # compare it to all icon files
+        highest_result = 0
+        lvl = 0
+        for file in os.listdir('assets\\base_level'):
+            lvl_icon = cv.imread(file)
+            result = cv.matchTemplate(crop_img, lvl_icon, cv.TM_CCORR_NORMED)
+            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+            if highest_result < max_val:
+                highest_result = max_val
+                lvl = int(file[:-4])
+
         raw_text = tess.image_to_string(crop_img)
 
         # Todo: i should improve that at some point
         x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
         if 'Scout' in raw_text or 'nquis' in raw_text:
             playsound('bell.wav')
-            return ['scout', 0, x_ano_field, y_ano_field, 310, 80]
+            return ['scout', lvl, x_ano_field, y_ano_field, 310, 80]
         else:
             if 'Small' in raw_text:
-                list_ano.append(['small', 0, x_ano_field, y_ano_field, 310, 80])
+                list_ano.append(['small', lvl, x_ano_field, y_ano_field, 310, 80])
             else:
                 if 'Medium' in raw_text:
-                    list_ano.append(['medium', 0, x_ano_field, y_ano_field, 310, 80])
+                    list_ano.append(['medium', lvl, x_ano_field, y_ano_field, 310, 80])
                     if 'Large' in raw_text:
-                        list_ano.append(['large', 0, x_ano_field, y_ano_field, 310, 80])
+                        list_ano.append(['large', lvl, x_ano_field, y_ano_field, 310, 80])
                         # if 'Base' in raw_text:
                         #    list_ano.append(['base', 0, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
         # icon cv.rectangle(crop_img, pt, (pt[0] + 15, pt[1] + 15), (0, 0, 255), 2)
         # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
     # cv.imshow('.', CS_cv)
     # cv.waitKey()
+    print(list_ano)
     if list_ano[0][3] < 155:
         return list_ano[1]
     return list_ano[0]
@@ -253,8 +282,6 @@ def update_hp():
     health_sh = update_hp_helper(r_sh, 1 / 3, 0)
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
-def get_cargo():
-    print('todo cargocheck')
 def repair(desired_hp):
     # todo not tested
     update_hp()
@@ -284,7 +311,7 @@ def not_safe():
     #    return 1
     return 0
 def npc_enemies_count():
-    #todo: test for 10+ enemys
+    # todo: test for 10+ enemys
     swap_filter('PvE')
     x, y, w, h = 1547, 86, 18, 445
     as_icon = cv.imread('assets\\enemy_npc.png')
@@ -384,8 +411,6 @@ def loot():
     warp_to_ano()
     combat()
     return
-    print('todo loot()')
-    # playsound('bell.wav')
 
 
 def flee():
@@ -439,7 +464,7 @@ def combat():
         if current_npc_count != last_npc_count:
             orbit_enemy(0)
             last_npc_count = current_npc_count
-            #todo react to close enemys, nos, web, etc
+            # todo react to close enemys, nos, web, etc
         # for module in ModuleList:
         #    if module[1] == 'ifpossible':
         #        activate_module(module)
@@ -462,11 +487,9 @@ def warp_to_ano():
 
 
 def main():
-    calibrate()
-    combat()
+    get_good_anomaly()
 
-flee()
-# main()
+main()
 
 # CS = Image.open('screen.png')
 # CS = numpy.array(CS, dtype=numpy.uint8)
