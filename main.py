@@ -10,14 +10,17 @@ from PIL import Image
 from playsound import playsound
 import os
 
-tess.pytesseract.tesseract_cmd = 'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe'
+tess.pytesseract.tesseract_cmd = 'E:\\Eve Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
-# will be updated automatically -> calibrate()
+# to be changed by user / fixed
+preferredOrbit = 26
+module_icon_radius = 40
+color_white = [255, 255, 255, 255]
+
+# updated by functions
 health_st = 100
 health_ar = 100
 health_sh = 100
-preferredOrbit = 10
-module_icon_radius = 40
 ModuleList = []
 
 # INIT
@@ -28,6 +31,7 @@ if len(devices) == 0:
     print('no device attached')
     quit()
 # CS = current Screenshot
+print(devices)
 device = devices[0]
 CS = device.screencap()
 with open('screen.png', 'wb') as f:
@@ -35,6 +39,7 @@ with open('screen.png', 'wb') as f:
 CS_cv = cv.imread('screen.png')
 CS_image = Image.open('screen.png')
 CS_image = np.array(CS_image, dtype=np.uint8)
+
 
 # BASIC FUNCTIONS
 def power_nap():
@@ -48,7 +53,7 @@ def update_cs():
     CS_image = Image.open('screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
 def compare_colors(a, b):
-    return (abs(a[0]-b[0])+abs(a[1]-b[1])+abs(a[2]-b[2])+abs(a[3]-b[3]))/255/4
+    return (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3])) / 255 / 4
 def get_point_in_circle(x, y, r):
     a = 3.  # shape
     angle = np.random.default_rng().random() * np.pi
@@ -61,21 +66,25 @@ def click_circle(x, y, r):
 
     # great display:
     # https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.power.html#numpy.random.Generator.power
-def drag_from_circle(x, y, r, d):
-    tmp = get_point_in_circle(x, y, r)
-    x, y = tmp[0], tmp[1]
-    if d == 0:
-        device.shell(f'input touchscreen tap {x} {y}')
-    angle = np.random.default_rng().random() * np.pi
-    r = 130 + d*2.4
-    device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
-    power_nap()
 def click_rectangle(x, y, w, h):
     x = w * np.random.default_rng().random() + x
     y = h * np.random.default_rng().random() + y
     device.shell(f'input touchscreen tap {x} {y}')
     power_nap()
+def swipe_from_circle(x, y, r, d, random_direction):
+    tmp = get_point_in_circle(x, y, r)
+    x, y = tmp[0], tmp[1]
+    if d == 0:
+        device.shell(f'input touchscreen tap {x} {y}')
 
+    # random direction: 0- random, 1 is down, 2 is ?, 3 is up, 4 is up
+    angle = np.random.default_rng().random() * np.pi
+    if random_direction > 1:
+        angle = np.pi / 2 * random_direction
+    r = 130 + d * 2.4
+
+    device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
+    power_nap()
 # INTERNAL HELPER FUNCTIONS
 def calibrate():
     file = open('modules\_pos.txt')
@@ -89,9 +98,6 @@ def calibrate():
             center = (max_loc[0] + int(tmp[2]), max_loc[1] + int(tmp[3]))
             ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
             # cv.circle(CS_cv, center, 40, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
-        else:
-            print(tmp[0] + ' not found: ')
-            print(max_val)
         tmp = file.readline()
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
@@ -225,7 +231,13 @@ def choose_anomaly():
             playsound('bell.wav')
             return ano
     for ano in ano_list:
-        if ano[1] == 6 or ano[1] == 5:
+        if ano[1] == 6 and ano[0] == 'medium':
+            return ano
+    for ano in ano_list:
+        if ano[1] == 5 and ano[0] == 'large':
+            return ano
+    for ano in ano_list:
+        if ano[1] == 6 and ano[0] == 'large':
             return ano
     return ano_list[0]
 def wait_warp():
@@ -243,7 +255,7 @@ def update_hp_helper(r, off, offset):
         angle = np.pi * (1.32 - 0.62 * tmp / precision)
         x = int(center_x + np.cos(angle) * r)
         y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) / 3 * off + offset)
-        # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp*10), thickness=3, lineType=cv.LINE_4)
+        cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp * 10), thickness=3, lineType=cv.LINE_4)
         if CS_image[y][x][2] > 90:
             return int(100 - tmp / precision * 100)
         tmp += 1
@@ -258,13 +270,28 @@ def update_hp():
     health_sh = update_hp_helper(r_sh, 1 / 3, 0)
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
-def not_safe():
+def danger_handling():
     if health_st < 90:
-        flee()
+        for i in range(3):
+            flee()
+            print('hull critical')
         go_home()
-        playsound('bell.wav')
         return 1
-    # if get_player_thread():
+    if get_capacitor() < 5:
+        for i in range(3):
+            flee()
+            print('capacitor critical')
+        wait_for_cap()
+        warp_to_ano()
+        combat()
+        return 1
+    if get_player_thread():
+        for i in range(3):
+            flee()
+            print('player detected')
+        wait_warp()
+        warp_to_ano()
+        combat()
         return 1
     return 0
 def npc_enemies_count():
@@ -298,9 +325,8 @@ def npc_enemies_count():
         raw_text = re.sub('\D', '', raw_text)
         tmp = 0
         if int(len(raw_text)) == 0:
-            print('npc_enemy_count: guessed 2')
             return 2
-        while tmp < int(len(raw_text)/2):
+        while tmp < int(len(raw_text) / 2):
             raw_text = raw_text[:-1]
             tmp += 1
         return int(raw_text)
@@ -311,11 +337,41 @@ def warp_to_ano():
     if anomaly == 'scout':
         warp_to(0, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
         solve_scouts()
+    print()
+    print(anomaly)
     warp_to(preferredOrbit, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
     time.sleep(10)
     wait_warp()
 
     # swap to PvE
+def get_cargo():
+    steps = 20
+    x, y, w = 4, 101, int(145 / steps)
+    # 0.55 match, 0.69 no match
+    dif = compare_colors(CS_image[y][x], color_white)
+    for i in range(steps):
+        if compare_colors(CS_image[y][x + (i * w)], color_white) > 0.08 + dif:
+            return 100 * (i-1) / steps
+    return 100
+def get_capacitor():
+    r_ca = - 80
+    tmp = 1
+    precision = 20
+    factor_y = 0.67
+    center_x = 800
+    center_y = 779
+    while tmp < precision + 1:
+        angle = np.pi * (1.32 - 0.62 * tmp / precision)
+        x = int(center_x + np.cos(angle) * r_ca)
+        y = int(center_y + np.sin(angle) * r_ca * factor_y - abs(10 - abs(tmp - precision / 2) / 3) + 2)
+        # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp*10), thickness=3, lineType=cv.LINE_4)
+        # match 222, no match under worst conditions 90
+        if CS_image[y][x][0] < 180:
+            return int((tmp - 1) / precision * 100)
+        tmp += 1
+    # cv.imshow('image', CS_cv)
+    # cv.waitKey(0)
+    return 100
 
 # INTERFACE HELPER FUNCTIONS
 def press_lock_button():
@@ -325,13 +381,13 @@ def press_lock_button():
     result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
     if max_val > 0.95:
-        click_circle(x + w/2, y + h/2, 25)
+        click_circle(x + w / 2, y + h / 2, 25)
         return 1
     return 0
 def warp_to(distance, x, y, w, h):
     # x and y must be the upper left corner of the warp object
     click_rectangle(x, y, w, h)
-    drag_from_circle(x - 173, y + 146, 40, distance)
+    swipe_from_circle(x - 173, y + 146, 40, distance, 0)
 def swap_filter(string_in_name):
     # swaps to a filter containing the given string
     update_cs()
@@ -403,11 +459,17 @@ def repair(desired_hp):
                 deactivate_module(module)
 def flee():
     swap_filter('esc')
-    click_rectangle(1210, 67, 314, 88)
-    click_rectangle(903, 168, 301, 91)
+    rng = random.random()
+    for i in range(4):
+        if rng < i*0.25:
+            click_rectangle(1210, 67 + 87*i, 314, 88)
+            click_rectangle(903, 168 + 87*i, 301, 91)
+            break
     for module in ModuleList:
         if module[1] == 'esc':
             activate_module(module)
+        if module[1] == 'prop':
+            deactivate_module(module)
 def orbit_enemy(a):
     x_off = - 100
     click_circle(1118 + a * x_off, 65, module_icon_radius)
@@ -416,12 +478,73 @@ def engage_enemy(a):
     x_off = - 100
     click_circle(1118 + a * x_off, 65, module_icon_radius)
     click_rectangle(868 + a * x_off, 416, 308, 96)
+def update_and_checkup_for_combat():
+    update_cs()
+    update_hp()
+    swap_filter('PvE')
 
+    # check hp
+    repair(90)
+
+    # players, hull dmg?
+    return danger_handling()
+def troubleshoot_filter_window():
+    x, y = 1539, 504
+    # match was about 0.22, no match was 0.64, match = need fix
+    if compare_colors(CS_image[504][1539], color_white) < 0.4:
+        click_circle(x, y, 14)
+    return
 
 # STATES
+def wait_for_cap():
+    print('waiting for cap')
+    for module in ModuleList:
+        deactivate_module(module)
+    while 1:
+        if get_capacitor() > 60:
+            return
+        troubleshoot_filter_window()
+        if get_player_thread():
+            for i in range(3):
+                flee()
+                print('player detected')
+            playsound('bell.wav')
+            wait_warp()
+            warp_to_ano()
+            combat()
+            return 1
+        time.sleep(3)
+def work_on_container():
+    waiting_time = 10
+    click_rectangle(1210, 67, 314, 88)
+    click_rectangle(903, 168, 301, 91)
+    while 1:
+        for i in range(waiting_time):
+            update_cs()
+            time.sleep(0.1)
+            if CS_image[772][600][1] > 85:
+                click_rectangle(393, 748, 322, 67)
+                time.sleep(1)
+                return 0
+            if danger_handling() == 1:
+                return 1
+            repair(100)
+            time.sleep(0.9)
+        if waiting_time > 200:
+            return 0
+        waiting_time *= 3
 def loot():
+    print('looting')
     # swap to container view
     swap_filter('PvE')
+    # scroll up
+    swipe_from_circle(1406, 132, 20, 110, 1)
+    # turn on prop module
+    for module in ModuleList:
+        if module[1] == 'prop':
+            activate_module(module)
+
+    # find and click wreck icon in filter bar
     x, y, w, h = 1547, 86, 18, 445
     wreck_icon = cv.imread('assets\\wreck.png')
     crop_img = CS_cv[y:y + h, x:x + w]
@@ -433,29 +556,22 @@ def loot():
             # behavior
             update_cs()
             repair(100)
-            not_safe()
+            danger_handling()
             if npc_enemies_count():
                 combat()
                 return
+
+            if get_cargo() >= 95:
+                go_home()
+                return
+
             # still containers left?
-            waiting_time = 10
-            # todo: cargo full - go home
             crop_img = CS_cv[y:y + h, x:x + w]
             result = cv.matchTemplate(crop_img, wreck_icon, cv.TM_CCORR_NORMED)
             min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
             if max_val > 0.95:
-                click_rectangle(1210, 67, 314, 88)
-                click_rectangle(903, 168, 301, 91)
-                for i in range(waiting_time):
-                    update_cs()
-                    if CS_image[772][600][1] > 85:
-                        click_rectangle(393, 736, 322, 85)
-                        update_cs()
-                        break
-                    not_safe()
-                    repair(100)
-                    time.sleep(1)
-                waiting_time *= 3
+                if work_on_container():
+                    return
             else:
                 break
     print('site done')
@@ -463,25 +579,49 @@ def loot():
     combat()
     return
 def go_home():
+    # open inventory
+    click_rectangle(7, 101, 141, 46)
+    time.sleep(1.5)
+    # click on assets
+    click_rectangle(63, 824, 257, 59)
+    time.sleep(2.5)
+    # click on station
+    click_rectangle(42, 314, 279, 98)
+    time.sleep(2)
+    # click on set dest
+    click_rectangle(796, 769, 191, 95)
+    time.sleep(0.5)
+    # click set dest
+    click_rectangle(287, 737, 306, 80)
+    time.sleep(0.5)
+    # click on autopilot
+    click_circle(38, 191, 15)
     print('todo go_home')
+    quit()
 def combat():
     print('combat')
     tmp_lock = time.time()
     tmp_weapon = time.time()
     last_npc_count = 0
-    count_console = 0
+
+    orbit_enemy(0)
+    # maybe i shouldnt directly engage a potential enemy? it saves me like 6 secs every
+    # fight but seems akward, orbit is okay
+    engage_enemy(0)
+
     while 1:
-        update_cs()
-        update_hp()
-
-        # players, hull dmg?
-        not_safe()
-        swap_filter('PvE')
-
-        # check hp
-        repair(85)
-
+        if update_and_checkup_for_combat() == 1:
+            return
+        troubleshoot_filter_window()
         current_npc_count = npc_enemies_count()
+
+        # update targets
+        # todo: lock closer targets
+        if time.time() - tmp_lock > 0:
+            if press_lock_button():
+                tmp_lock = time.time() + 7
+                tmp_weapon = time.time() + 10
+
         # no enemies
         if not current_npc_count:
             time.sleep(2)
@@ -489,27 +629,26 @@ def combat():
             if not current_npc_count:
                 loot()
                 return
-        # update targets
-        # todo: lock closer targets
-        if time.time() - tmp_lock > 0:
-            if press_lock_button():
-                tmp_lock = time.time() + 7
-                tmp_weapon = time.time() + 10
+        if update_and_checkup_for_combat() == 1:
+            return
+
         # check if weapons are online
         if time.time() - tmp_weapon > 0:
             for module in ModuleList:
                 if module[1] == 'drone':
                     # or weapon
                     if activate_module(module):
+                        # this orbit call should not be necessary, but sometimes it somehow misses orbit
+                        orbit_enemy(0)
                         tmp_weapon = time.time() + 10
         # activate standard modules, behavior
         if current_npc_count != last_npc_count:
             orbit_enemy(0)
             last_npc_count = current_npc_count
             # todo react to close enemys, nos, web, etc
-        # for module in ModuleList:
-        #    if module[1] == 'ifpossible':
-        #        activate_module(module)
+        for module in ModuleList:
+            if module[1] == 'prop':
+                activate_module(module)
 
         # update movement
         # no enemys left? loot
@@ -520,7 +659,11 @@ def solve_scouts():
 
 def main():
     calibrate()
+    warp_to_ano()
     combat()
+
+
+print(get_cargo())
 main()
 
 # CS = Image.open('screen.png')
