@@ -1,0 +1,1 @@
+E:\Eve_Echoes\Bot\EveB\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\main.py
