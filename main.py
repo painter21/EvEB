@@ -85,6 +85,7 @@ def swipe_from_circle(x, y, r, d, random_direction):
 
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
     power_nap()
+
 # INTERNAL HELPER FUNCTIONS
 def calibrate():
     file = open('modules\_pos.txt')
@@ -228,7 +229,7 @@ def choose_anomaly():
         quit()
     for ano in ano_list:
         if ano[0] == 'scout':
-            playsound('bell.wav')
+            playsound('assets\\sounds\\bell.wav')
             return ano
     for ano in ano_list:
         if ano[1] == 6 and ano[0] == 'medium':
@@ -508,7 +509,7 @@ def wait_for_cap():
             for i in range(3):
                 flee()
                 print('player detected')
-            playsound('bell.wav')
+            playsound('assets\\sounds\\bell.wav')
             wait_warp()
             warp_to_ano()
             combat()
