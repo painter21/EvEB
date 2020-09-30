@@ -2,7 +2,9 @@ ArmorRepairModuleCruiser ar_regen 38 24
 WebCruiser ignore 22 -6
 StabCruiser esc 13 13
 NosCruiser ignore 13 10
-DroneCruiser ifpossible 20 19
+DroneCruiser situational 20 19
 Drone3Cruiser drone 7 31
+Drone4Cruiser drone -11 7
 RRailgunCruiser weapon 12 31
+RMediumLaser weapon 16 12
 Afterburner prop 9 23

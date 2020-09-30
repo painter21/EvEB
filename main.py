@@ -10,10 +10,10 @@ from PIL import Image
 from playsound import playsound
 import os
 
-tess.pytesseract.tesseract_cmd = 'E:\\Eve Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
+tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
 # to be changed by user / fixed
-preferredOrbit = 26
+preferredOrbit = 0
 module_icon_radius = 40
 color_white = [255, 255, 255, 255]
 
@@ -271,25 +271,35 @@ def update_hp():
     health_sh = update_hp_helper(r_sh, 1 / 3, 0)
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
-def danger_handling():
+def danger_handling_combat():
     if health_st < 90:
+        print('hull critical')
         for i in range(3):
-            flee()
-            print('hull critical')
+            flee(1)
         go_home()
         return 1
-    if get_capacitor() < 5:
+    if get_capacitor() < 10:
+        print('capacitor critical')
         for i in range(3):
-            flee()
-            print('capacitor critical')
+            flee(1)
         wait_for_cap()
         warp_to_ano()
         combat()
         return 1
     if get_player_thread():
+        print('player detected')
         for i in range(3):
-            flee()
-            print('player detected')
+            flee(4)
+        wait_warp()
+        warp_to_ano()
+        combat()
+        return 1
+    return 0
+def danger_handling_farming():
+    if get_player_thread():
+        print('player detected')
+        for i in range(3):
+            flee(4)
         wait_warp()
         warp_to_ano()
         combat()
@@ -373,6 +383,11 @@ def get_capacitor():
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
     return 100
+def show_player_for_confirmation():
+    x, y ,h ,w = 66, 1, 87, 127
+    crop_img = CS_cv[y:y + h, x:x + w]
+    cv.imshow('tmp', crop_img)
+    cv.waitKey()
 
 # INTERFACE HELPER FUNCTIONS
 def press_lock_button():
@@ -451,6 +466,7 @@ def repair(desired_hp):
         if module[1] == 'ar_regen':
             if armor_turn:
                 activate_module(module)
+                print(health_ar)
             else:
                 deactivate_module(module)
         if module[1] == 'sh_regen':
@@ -458,13 +474,13 @@ def repair(desired_hp):
                 activate_module(module)
             else:
                 deactivate_module(module)
-def flee():
+def flee(maximus_dist):
     swap_filter('esc')
     rng = random.random()
-    for i in range(4):
-        if rng < i*0.25:
-            click_rectangle(1210, 67 + 87*i, 314, 88)
-            click_rectangle(903, 168 + 87*i, 301, 91)
+    for i in range(maximus_dist+1):
+        if rng < i/maximus_dist:
+            click_rectangle(1210, 67 + 87*(i-1), 314, 88)
+            click_rectangle(903, 168 + 87*(i-1), 301, 91)
             break
     for module in ModuleList:
         if module[1] == 'esc':
@@ -485,10 +501,10 @@ def update_and_checkup_for_combat():
     swap_filter('PvE')
 
     # check hp
-    repair(90)
+    repair(85)
 
     # players, hull dmg?
-    return danger_handling()
+    return danger_handling_combat()
 def troubleshoot_filter_window():
     x, y = 1539, 504
     # match was about 0.22, no match was 0.64, match = need fix
@@ -507,13 +523,14 @@ def wait_for_cap():
         troubleshoot_filter_window()
         if get_player_thread():
             for i in range(3):
-                flee()
+                flee(4)
                 print('player detected')
             playsound('assets\\sounds\\bell.wav')
             wait_warp()
             warp_to_ano()
             combat()
             return 1
+        repair(100)
         time.sleep(3)
 def work_on_container():
     waiting_time = 10
@@ -524,26 +541,40 @@ def work_on_container():
             update_cs()
             time.sleep(0.1)
             if CS_image[772][600][1] > 85:
-                click_rectangle(393, 748, 322, 67)
-                time.sleep(1)
+                count = 0
+                while 1:
+                    click_rectangle(454, 748, 261, 67)
+                    update_cs()
+                    if CS_image[772][600][1] < 85:
+                        break
+                    if count > 20:
+                        playsound('assets\\sounds\\bell.wav')
+                    count += 1
+                    break
                 return 0
-            if danger_handling() == 1:
+            if danger_handling_farming() == 1:
                 return 1
-            repair(100)
             time.sleep(0.9)
-        if waiting_time > 200:
-            return 0
         waiting_time *= 3
+        print('increased waiting time to', waiting_time)
+        if waiting_time > 90:
+            return 0
+        repair(100)
+        if get_speed() == 0:
+            click_circle(590, 754, 25)
 def loot():
     print('looting')
     # swap to container view
-    swap_filter('PvE')
-    # scroll up
-    swipe_from_circle(1406, 132, 20, 110, 1)
+
     # turn on prop module
     for module in ModuleList:
         if module[1] == 'prop':
+            print('activating prop')
             activate_module(module)
+
+    swap_filter('PvE')
+    # scroll up
+    swipe_from_circle(1406, 132, 20, 110, 1)
 
     # find and click wreck icon in filter bar
     x, y, w, h = 1547, 86, 18, 445
@@ -554,10 +585,11 @@ def loot():
     if max_val > 0.95:
         click_circle(max_loc[0] + x + 5, max_loc[1] + y + 7, 15)
         while 1:
+
             # behavior
             update_cs()
             repair(100)
-            danger_handling()
+            danger_handling_farming()
             if npc_enemies_count():
                 combat()
                 return
@@ -595,6 +627,8 @@ def go_home():
     # click set dest
     click_rectangle(287, 737, 306, 80)
     time.sleep(0.5)
+    # click on close
+    click_circle(1543, 51, 10)
     # click on autopilot
     click_circle(38, 191, 15)
     print('todo go_home')
@@ -603,6 +637,7 @@ def combat():
     print('combat')
     tmp_lock = time.time()
     tmp_weapon = time.time()
+    tmp_situational = time.time()
     last_npc_count = 0
 
     orbit_enemy(0)
@@ -651,6 +686,13 @@ def combat():
             if module[1] == 'prop':
                 activate_module(module)
 
+        # activate dmg amplifiers, nos, web
+        if time.time() - tmp_situational > 80:
+            tmp_situational = time.time()
+            for module in ModuleList:
+                if module[1] == 'situational':
+                    activate_module(module)
+
         # update movement
         # no enemys left? loot
 def solve_scouts():
@@ -660,11 +702,12 @@ def solve_scouts():
 
 def main():
     calibrate()
-    warp_to_ano()
-    combat()
+    for module in ModuleList:
+        print(module)
+    show_player_for_confirmation()
+    loot()
 
 
-print(get_cargo())
 main()
 
 # CS = Image.open('screen.png')
