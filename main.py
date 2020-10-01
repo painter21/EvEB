@@ -9,11 +9,12 @@ from numpy import random
 from PIL import Image
 from playsound import playsound
 import os
+import re
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
 # to be changed by user / fixed
-preferredOrbit = 0
+preferredOrbit = 29
 module_icon_radius = 40
 color_white = [255, 255, 255, 255]
 
@@ -22,6 +23,10 @@ health_st = 100
 health_ar = 100
 health_sh = 100
 ModuleList = []
+start_farm_time = time.time()
+last_farm_site = 0
+last_inventory_value = 0
+interrupted_farming = 0
 
 # INIT
 # connect to Bluestacks
@@ -76,6 +81,7 @@ def swipe_from_circle(x, y, r, d, random_direction):
     x, y = tmp[0], tmp[1]
     if d == 0:
         device.shell(f'input touchscreen tap {x} {y}')
+        return
 
     # random direction: 0- random, 1 is down, 2 is ?, 3 is up, 4 is up
     angle = np.random.default_rng().random() * np.pi
@@ -85,6 +91,7 @@ def swipe_from_circle(x, y, r, d, random_direction):
 
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
     power_nap()
+
 
 # INTERNAL HELPER FUNCTIONS
 def calibrate():
@@ -209,7 +216,8 @@ def get_list_anomaly():
                                 list_ano.append(['large', lvl, x_ano_field, y_ano_field, 310, 80])
                             else:
                                 if 'Base' in raw_text:
-                                    list_ano.append(['base', lvl, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
+                                    print('ignore base')
+                                    # list_ano.append(['base', lvl, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
                 # icon cv.rectangle(crop_img, pt, (pt[0] + 15, pt[1] + 15), (0, 0, 255), 2)
                 # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
             # cv.imshow('.', CS_cv)
@@ -232,13 +240,13 @@ def choose_anomaly():
             playsound('assets\\sounds\\bell.wav')
             return ano
     for ano in ano_list:
+        if ano[1] == 5:
+            return ano
+    for ano in ano_list:
         if ano[1] == 6 and ano[0] == 'medium':
             return ano
     for ano in ano_list:
-        if ano[1] == 5 and ano[0] == 'large':
-            return ano
-    for ano in ano_list:
-        if ano[1] == 6 and ano[0] == 'large':
+        if ano[1] == 6 and ano[0] == 'small':
             return ano
     return ano_list[0]
 def wait_warp():
@@ -305,7 +313,7 @@ def danger_handling_farming():
         combat()
         return 1
     return 0
-def npc_enemies_count():
+def get_npc_count():
     # todo: test for 10+ enemys
     swap_filter('PvE')
     x, y, w, h = 1547, 86, 18, 445
@@ -332,7 +340,6 @@ def npc_enemies_count():
                 row += 1
             line += 1
         raw_text = tess.image_to_string(blank_img).strip()
-        import re
         raw_text = re.sub('\D', '', raw_text)
         tmp = 0
         if int(len(raw_text)) == 0:
@@ -350,8 +357,12 @@ def warp_to_ano():
         solve_scouts()
     print()
     print(anomaly)
+    # sometimes the interface times out and i have to reopen it
+    click_rectangle(1243, 265, 275, 254)
     warp_to(preferredOrbit, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
-    time.sleep(10)
+    time.sleep(3)
+    farm_tracker(anomaly)
+    time.sleep(7)
     wait_warp()
 
     # swap to PvE
@@ -362,7 +373,7 @@ def get_cargo():
     dif = compare_colors(CS_image[y][x], color_white)
     for i in range(steps):
         if compare_colors(CS_image[y][x + (i * w)], color_white) > 0.08 + dif:
-            return 100 * (i-1) / steps
+            return 100 * (i - 1) / steps
     return 100
 def get_capacitor():
     r_ca = - 80
@@ -384,10 +395,73 @@ def get_capacitor():
     # cv.waitKey(0)
     return 100
 def show_player_for_confirmation():
-    x, y ,h ,w = 66, 1, 87, 127
+    x, y, h, w = 66, 1, 87, 127
     crop_img = CS_cv[y:y + h, x:x + w]
     cv.imshow('tmp', crop_img)
     cv.waitKey()
+def farm_tracker(ano):
+    # t5med = 653k with frig in end
+    fri_six, des_six, cru_six = 19000, 19000, 90000
+    fri_five, des_five, cru_five = 15000, 20000, 53000
+    # see if there was a site done before and estimate the value gained / time
+    global last_farm_site, start_farm_time, last_inventory_value
+    if last_farm_site == 0 or interrupted_farming:
+        last_farm_site = ano
+        start_farm_time = time.time()
+        last_inventory_value = get_inventory_value()
+        return
+    # i should not do it like that because it is just not transparent:
+    # updates inventory value and calculates the difference in one line
+    inventory_value = abs(last_inventory_value - (last_inventory_value := get_inventory_value()))
+
+    bounty_value = 0
+    # ano bounties
+    if last_farm_site[1] == 6:
+        if last_farm_site[0] == 'large':
+            bounty_value += 6 * fri_six + 10 * des_six + 16 * cru_six
+        if last_farm_site[0] == 'medium':
+            bounty_value += 6 * fri_six + 8 * des_six + 11 * cru_six
+        if last_farm_site[0] == 'small':
+            bounty_value += 4 * fri_six + 3 * des_six + 3 * cru_six
+    if last_farm_site[1] == 5:
+        if last_farm_site[0] == 'large':
+            bounty_value += 12 * fri_five + 8 * des_five + 10 * cru_five
+        if last_farm_site[0] == 'medium':
+            bounty_value += 6 * fri_five + 8 * des_five + 11 * cru_five
+        if last_farm_site[0] == 'small':
+            bounty_value += 4 * fri_five + 3 * des_five + 3 * cru_five
+
+    print('new inventory value:', last_inventory_value)
+    print('difference:', inventory_value)
+    print('bountys:', bounty_value)
+
+    string = str(last_farm_site[1]) + last_farm_site[0] + ':\n' + \
+             str(inventory_value) + '\n' + str(bounty_value) + '\n-------------' + \
+             str(inventory_value + bounty_value)
+
+    absolutely_professional_databank = open('E:\\Eve_Echoes\\Bot\\tmp.txt')
+    absolutely_professional_databank.write(string)
+    absolutely_professional_databank.close()
+
+    start_farm_time = time.time()
+    if ano != 0:
+        last_farm_site = ano
+def get_inventory_value():
+    x, y, w, h = 550, 825, 269, 39
+
+    # open inventory
+    click_rectangle(7, 101, 141, 46)
+    time.sleep(2)
+    update_cs()
+    crop_img = CS_cv[y:y + h, x:x + w]
+    # cv.imshow('.', crop_img)
+    # cv.waitKey()
+    raw_text = tess.image_to_string(crop_img).strip()
+    raw_text = re.sub('\D', '', raw_text)
+    # click on close
+    click_circle(1543, 51, 10)
+    return raw_text
+
 
 # INTERFACE HELPER FUNCTIONS
 def press_lock_button():
@@ -403,7 +477,7 @@ def press_lock_button():
 def warp_to(distance, x, y, w, h):
     # x and y must be the upper left corner of the warp object
     click_rectangle(x, y, w, h)
-    swipe_from_circle(x - 173, y + 146, 40, distance, 0)
+    swipe_from_circle(x - 173, min(y + 146, 845), 40, distance, 0)
 def swap_filter(string_in_name):
     # swaps to a filter containing the given string
     update_cs()
@@ -435,7 +509,9 @@ def activate_module(module):
         crop_img = CS_cv[y:y + h, x:x + w]
         result = cv.matchTemplate(crop_img, img_target, cv.TM_CCORR_NORMED)
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        print('tryiing to activate drone')
         if max_val < 0.95:
+            print('activting drone')
             if random.random() > 0.5:
                 engage_enemy(0)
                 return 1
@@ -477,10 +553,10 @@ def repair(desired_hp):
 def flee(maximus_dist):
     swap_filter('esc')
     rng = random.random()
-    for i in range(maximus_dist+1):
-        if rng < i/maximus_dist:
-            click_rectangle(1210, 67 + 87*(i-1), 314, 88)
-            click_rectangle(903, 168 + 87*(i-1), 301, 91)
+    for i in range(maximus_dist + 1):
+        if rng < i / maximus_dist:
+            click_rectangle(1210, 67 + 87 * (i - 1), 314, 88)
+            click_rectangle(903, 168 + 87 * (i - 1), 301, 91)
             break
     for module in ModuleList:
         if module[1] == 'esc':
@@ -492,9 +568,11 @@ def orbit_enemy(a):
     click_circle(1118 + a * x_off, 65, module_icon_radius)
     click_rectangle(868 + a * x_off, 319, 308, 96)
 def engage_enemy(a):
+    # todo: feels like it is not working
     x_off = - 100
     click_circle(1118 + a * x_off, 65, module_icon_radius)
-    click_rectangle(868 + a * x_off, 416, 308, 96)
+    time.sleep(0.5)
+    click_rectangle(870 + a * x_off, 421, 302, 90)
 def update_and_checkup_for_combat():
     update_cs()
     update_hp()
@@ -511,6 +589,7 @@ def troubleshoot_filter_window():
     if compare_colors(CS_image[504][1539], color_white) < 0.4:
         click_circle(x, y, 14)
     return
+
 
 # STATES
 def wait_for_cap():
@@ -555,9 +634,9 @@ def work_on_container():
             if danger_handling_farming() == 1:
                 return 1
             time.sleep(0.9)
-        waiting_time *= 3
+        waiting_time *= 2
         print('increased waiting time to', waiting_time)
-        if waiting_time > 90:
+        if waiting_time > 20:
             return 0
         repair(100)
         if get_speed() == 0:
@@ -590,7 +669,7 @@ def loot():
             update_cs()
             repair(100)
             danger_handling_farming()
-            if npc_enemies_count():
+            if get_npc_count():
                 combat()
                 return
 
@@ -631,6 +710,8 @@ def go_home():
     click_circle(1543, 51, 10)
     # click on autopilot
     click_circle(38, 191, 15)
+
+    farm_tracker(0)
     print('todo go_home')
     quit()
 def combat():
@@ -646,18 +727,19 @@ def combat():
     engage_enemy(0)
 
     while 1:
+        print('combat cycle')
         if update_and_checkup_for_combat() == 1:
             return
         troubleshoot_filter_window()
-        current_npc_count = npc_enemies_count()
-
+        current_npc_count = get_npc_count()
+        print(0)
         # update targets
         # todo: lock closer targets
         if time.time() - tmp_lock > 0:
             if press_lock_button():
                 tmp_lock = time.time() + 7
                 tmp_weapon = time.time() + 10
-
+        print(1)
         # no enemies
         if not current_npc_count:
             time.sleep(2)
@@ -667,7 +749,7 @@ def combat():
                 return
         if update_and_checkup_for_combat() == 1:
             return
-
+        print(2)
         # check if weapons are online
         if time.time() - tmp_weapon > 0:
             for module in ModuleList:
@@ -677,6 +759,8 @@ def combat():
                         # this orbit call should not be necessary, but sometimes it somehow misses orbit
                         orbit_enemy(0)
                         tmp_weapon = time.time() + 10
+
+        print(3)
         # activate standard modules, behavior
         if current_npc_count != last_npc_count:
             orbit_enemy(0)
@@ -685,28 +769,26 @@ def combat():
         for module in ModuleList:
             if module[1] == 'prop':
                 activate_module(module)
-
+        print(4)
         # activate dmg amplifiers, nos, web
-        if time.time() - tmp_situational > 80:
+        if time.time() - tmp_situational > 90:
             tmp_situational = time.time()
             for module in ModuleList:
                 if module[1] == 'situational':
                     activate_module(module)
-
+        print(5)
         # update movement
         # no enemys left? loot
 def solve_scouts():
     print('todo: solve_scouts')
     quit()
-
-
 def main():
     calibrate()
     for module in ModuleList:
         print(module)
     show_player_for_confirmation()
-    loot()
-
+    warp_to_ano()
+    combat()
 
 main()
 
