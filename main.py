@@ -76,7 +76,7 @@ def click_rectangle(x, y, w, h):
     y = h * np.random.default_rng().random() + y
     device.shell(f'input touchscreen tap {x} {y}')
     power_nap()
-def swipe_from_circle(x, y, r, d, random_direction):
+def swipe_from_circle(x, y, r, d, direction):
     tmp = get_point_in_circle(x, y, r)
     x, y = tmp[0], tmp[1]
     if d == 0:
@@ -84,9 +84,11 @@ def swipe_from_circle(x, y, r, d, random_direction):
         return
 
     # random direction: 0- random, 1 is down, 2 is ?, 3 is up, 4 is up
-    angle = np.random.default_rng().random() * np.pi
-    if random_direction > 1:
-        angle = np.pi / 2 * random_direction
+
+    if direction > 0:
+        angle = np.pi / 2 * direction
+    else:
+        angle = np.random.default_rng().random() * np.pi
     r = 130 + d * 2.4
 
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
@@ -434,14 +436,18 @@ def farm_tracker(ano):
     print('new inventory value:', last_inventory_value)
     print('difference:', inventory_value)
     print('bountys:', bounty_value)
+    print((inventory_value + bounty_value)/(time.time() - start_farm_time))
 
-    string = str(last_farm_site[1]) + last_farm_site[0] + ':\n' + \
-             str(inventory_value) + '\n' + str(bounty_value) + '\n-------------' + \
-             str(inventory_value + bounty_value)
+    string = str(last_farm_site[1]) + last_farm_site[0] + '\n' + \
+             'Items:\t\t' + str(inventory_value) + '\n' + \
+             'Bountys:\t' + str(bounty_value) + '\n' + \
+             'Total:\t\t' + str(inventory_value + bounty_value) + '\n' + \
+             'Time:\t\t' + str(int(time.time() - start_farm_time)) + '\n' + \
+             str(int((inventory_value + bounty_value)/(time.time() - start_farm_time)*3600)) + ' ISK/h\n\n'
 
-    absolutely_professional_databank = open('E:\\Eve_Echoes\\Bot\\tmp.txt')
-    absolutely_professional_databank.write(string)
-    absolutely_professional_databank.close()
+    absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+    absolutely_professional_database.write(string)
+    absolutely_professional_database.close()
 
     start_farm_time = time.time()
     if ano != 0:
@@ -460,7 +466,7 @@ def get_inventory_value():
     raw_text = re.sub('\D', '', raw_text)
     # click on close
     click_circle(1543, 51, 10)
-    return raw_text
+    return int(raw_text)
 
 
 # INTERFACE HELPER FUNCTIONS
@@ -787,10 +793,7 @@ def main():
     for module in ModuleList:
         print(module)
     show_player_for_confirmation()
-    warp_to_ano()
-    combat()
+    loot()
+
 
 main()
-
-# CS = Image.open('screen.png')
-# CS = numpy.array(CS, dtype=numpy.uint8)
