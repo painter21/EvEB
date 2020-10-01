@@ -687,11 +687,11 @@ def wait_end_navigation(safety_time):
             # for stargate warps
             time.sleep(5)
             update_cs()
-            if not get_autopilot():time.sleep(5)
+            if not get_autopilot():
                 time.sleep(5)
                 update_cs()
                 if not get_autopilot():
-                return 1
+                    return 1
         time.sleep(safety_time)
 def wait_for_cap():
     print('waiting for cap')
