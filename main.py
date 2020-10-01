@@ -13,11 +13,6 @@ import re
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
-# to be changed by user / fixed
-preferredOrbit = 29
-module_icon_radius = 40
-color_white = [255, 255, 255, 255]
-
 # updated by functions
 health_st = 100
 health_ar = 100
@@ -467,6 +462,19 @@ def get_inventory_value():
     # click on close
     click_circle(1543, 51, 10)
     return int(raw_text)
+def get_autopilot():
+    x_a, y_a, x_b, y_b, x_c, y_c = 71, 171, 71, 207, 37, 189
+    autopilot_green = [66, 138, 122, 255]
+    print(compare_colors(CS_image[y_a][x_a], autopilot_green))
+    print(compare_colors(CS_image[y_b][x_b], autopilot_green))
+    print(compare_colors(CS_image[y_c][x_c], autopilot_green))
+    # check if autopilot is online (2 pixels because safety)
+    if compare_colors(CS_image[y_a][x_a], autopilot_green) < 0.1 and \
+            compare_colors(CS_image[y_b][x_b], autopilot_green) < 0.1:
+        # check if autopilot is running (should i just turn it on? nah)
+        if compare_colors(CS_image[y_c][x_c], autopilot_green) > 0.13:
+            return 1
+    return 0
 
 
 # INTERFACE HELPER FUNCTIONS
@@ -515,12 +523,14 @@ def activate_module(module):
         crop_img = CS_cv[y:y + h, x:x + w]
         result = cv.matchTemplate(crop_img, img_target, cv.TM_CCORR_NORMED)
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-        print('tryiing to activate drone')
+        print('trying to activate drone')
         if max_val < 0.95:
-            print('activting drone')
+            print('activating drone')
             if random.random() > 0.5:
+                print(0)
                 engage_enemy(0)
                 return 1
+            print(1)
             click_circle(module[2], module[3], module_icon_radius)
         return 1
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
@@ -569,16 +579,6 @@ def flee(maximus_dist):
             activate_module(module)
         if module[1] == 'prop':
             deactivate_module(module)
-def orbit_enemy(a):
-    x_off = - 100
-    click_circle(1118 + a * x_off, 65, module_icon_radius)
-    click_rectangle(868 + a * x_off, 319, 308, 96)
-def engage_enemy(a):
-    # todo: feels like it is not working
-    x_off = - 100
-    click_circle(1118 + a * x_off, 65, module_icon_radius)
-    time.sleep(0.5)
-    click_rectangle(870 + a * x_off, 421, 302, 90)
 def update_and_checkup_for_combat():
     update_cs()
     update_hp()
@@ -595,9 +595,99 @@ def troubleshoot_filter_window():
     if compare_colors(CS_image[504][1539], color_white) < 0.4:
         click_circle(x, y, 14)
     return
+def check_if_in_station():
+    print('todo station check')
+    return 1
+
+
+# PLAIN SCRIPTS
+def set_and_start_autopilot(target):
+    # only works for pI location
+    # click portrait
+    click_circle(140, 45, 30)
+    time.sleep(0.5)
+    # planetary production
+    click_rectangle(803, 562, 135, 135)
+    time.sleep(1)
+    # click planet
+    off = 145
+    click_rectangle(32, 205 + target*off, 211, 64)
+    # click set des
+    click_rectangle(1321, 767, 253, 81)
+    # click on close
+    click_circle(1543, 51, 10)
+    click_circle(1543, 51, 10)
+    # click on autopilot
+    click_circle(38, 191, 15)
+def orbit_enemy(a):
+    x_off = - 100
+    click_circle(1118 + a * x_off, 65, module_icon_radius)
+    click_rectangle(868 + a * x_off, 319, 308, 96)
+def engage_enemy(a):
+    # todo: feels like it is not working
+    x_off = - 100
+    click_circle(1118 + a * x_off, 65, module_icon_radius)
+    time.sleep(0.5)
+    click_rectangle(870 + a * x_off, 421, 302, 90)
+def dump_cargo():
+    # open inventory
+    click_rectangle(7, 101, 141, 46)
+    time.sleep(1.5)
+    # select all
+    click_rectangle(1169, 763, 120, 107)
+    time.sleep(1)
+    # move to
+    click_rectangle(29, 136, 322, 96)
+    time.sleep(0.3)
+    # item hangar
+    click_rectangle(525, 157, 227, 96)
+    time.sleep(5)
+    # click on close
+    click_circle(1543, 51, 10)
+    return 1
 
 
 # STATES
+def go_home():
+    # open inventory
+    click_rectangle(7, 101, 141, 46)
+    time.sleep(1.5)
+    # click on assets
+    click_rectangle(63, 824, 257, 59)
+    time.sleep(2.5)
+    # click on station
+    click_rectangle(42, 314, 279, 98)
+    time.sleep(2)
+    # click on set des
+    click_rectangle(796, 769, 191, 95)
+    time.sleep(0.5)
+    # click set des
+    click_rectangle(287, 737, 306, 80)
+    time.sleep(0.5)
+    # click on close
+    click_circle(1543, 51, 10)
+    click_circle(1543, 51, 10)
+    # click on autopilot
+    click_circle(38, 191, 15)
+
+    farm_tracker(0)
+    if repeat == 0:
+        playsound('assets\\sounds\\bell.wav')
+        quit()
+
+    wait_end_navigation(30)
+    dump_cargo()
+    from_station()
+def wait_end_navigation(safety_time):
+    print('wait for navigation')
+    while 1:
+        update_cs()
+        if not get_autopilot():
+            # for stargate warps
+            time.sleep(6)
+            if not get_autopilot():
+                return 1
+        time.sleep(safety_time)
 def wait_for_cap():
     print('waiting for cap')
     for module in ModuleList:
@@ -696,30 +786,6 @@ def loot():
     warp_to_ano()
     combat()
     return
-def go_home():
-    # open inventory
-    click_rectangle(7, 101, 141, 46)
-    time.sleep(1.5)
-    # click on assets
-    click_rectangle(63, 824, 257, 59)
-    time.sleep(2.5)
-    # click on station
-    click_rectangle(42, 314, 279, 98)
-    time.sleep(2)
-    # click on set dest
-    click_rectangle(796, 769, 191, 95)
-    time.sleep(0.5)
-    # click set dest
-    click_rectangle(287, 737, 306, 80)
-    time.sleep(0.5)
-    # click on close
-    click_circle(1543, 51, 10)
-    # click on autopilot
-    click_circle(38, 191, 15)
-
-    farm_tracker(0)
-    print('todo go_home')
-    quit()
 def combat():
     print('combat')
     tmp_lock = time.time()
@@ -745,7 +811,7 @@ def combat():
             if press_lock_button():
                 tmp_lock = time.time() + 7
                 tmp_weapon = time.time() + 10
-        print(1)
+
         # no enemies
         if not current_npc_count:
             time.sleep(2)
@@ -770,30 +836,52 @@ def combat():
         # activate standard modules, behavior
         if current_npc_count != last_npc_count:
             orbit_enemy(0)
+            engage_enemy(0)
             last_npc_count = current_npc_count
             # todo react to close enemys, nos, web, etc
         for module in ModuleList:
             if module[1] == 'prop':
                 activate_module(module)
-        print(4)
+
         # activate dmg amplifiers, nos, web
         if time.time() - tmp_situational > 90:
             tmp_situational = time.time()
             for module in ModuleList:
                 if module[1] == 'situational':
                     activate_module(module)
-        print(5)
-        # update movement
-        # no enemys left? loot
 def solve_scouts():
     print('todo: solve_scouts')
     quit()
-def main():
+
+
+# STARTS
+def from_station():
+    show_player_for_confirmation()
+    set_and_start_autopilot(planet)
+    wait_end_navigation(6)
+    calibrate()
+    warp_to_ano()
+    combat()
+def from_ano():
     calibrate()
     for module in ModuleList:
         print(module)
     show_player_for_confirmation()
-    loot()
+    combat()
+def from_system():
+    calibrate()
+    for module in ModuleList:
+        print(module)
+    show_player_for_confirmation()
+    warp_to_ano()
+    combat()
 
 
-main()
+# to be changed by user / fixed
+preferredOrbit = 29
+module_icon_radius = 40
+color_white = [255, 255, 255, 255]
+planet = 1
+repeat = 0
+
+from_station()
