@@ -6,5 +6,4 @@ DroneCruiser situational 20 19
 Drone3Cruiser drone 7 31
 Drone4Cruiser drone -11 7
 RRailgunCruiser weapon 12 31
-RMediumLaser weapon 16 12
 Afterburner prop 9 23

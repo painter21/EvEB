@@ -97,6 +97,7 @@ def calibrate():
     while tmp != '':
         tmp = tmp.split()
         ar = cv.imread('modules\\' + tmp[0] + '.png')
+        print(tmp[0])
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
         if max_val > 0.99:
@@ -465,9 +466,6 @@ def get_inventory_value():
 def get_autopilot():
     x_a, y_a, x_b, y_b, x_c, y_c = 71, 171, 71, 207, 37, 189
     autopilot_green = [66, 138, 122, 255]
-    print(compare_colors(CS_image[y_a][x_a], autopilot_green))
-    print(compare_colors(CS_image[y_b][x_b], autopilot_green))
-    print(compare_colors(CS_image[y_c][x_c], autopilot_green))
     # check if autopilot is online (2 pixels because safety)
     if compare_colors(CS_image[y_a][x_a], autopilot_green) < 0.1 and \
             compare_colors(CS_image[y_b][x_b], autopilot_green) < 0.1:
@@ -687,8 +685,12 @@ def wait_end_navigation(safety_time):
         update_cs()
         if not get_autopilot():
             # for stargate warps
-            time.sleep(6)
-            if not get_autopilot():
+            time.sleep(5)
+            update_cs()
+            if not get_autopilot():time.sleep(5)
+                time.sleep(5)
+                update_cs()
+                if not get_autopilot():
                 return 1
         time.sleep(safety_time)
 def wait_for_cap():
@@ -878,13 +880,18 @@ def from_system():
     show_player_for_confirmation()
     warp_to_ano()
     combat()
+def custom():
+    # wait_end_navigation(6)
+    calibrate()
+    warp_to_ano()
+    combat()
 
 
 # to be changed by user / fixed
 preferredOrbit = 29
 module_icon_radius = 40
 color_white = [255, 255, 255, 255]
-planet = 1
+planet = 0
 repeat = 0
 
-# from_station()
+from_station()
