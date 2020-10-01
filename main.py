@@ -619,6 +619,9 @@ def set_and_start_autopilot(target):
     click_circle(1543, 51, 10)
     # click on autopilot
     click_circle(38, 191, 15)
+    time.sleep(1)
+    # confirm
+    click_rectangle(1318, 641, 253, 87)
 def orbit_enemy(a):
     x_off = - 100
     click_circle(1118 + a * x_off, 65, module_icon_radius)
@@ -884,4 +887,4 @@ color_white = [255, 255, 255, 255]
 planet = 1
 repeat = 0
 
-from_station()
+# from_station()
