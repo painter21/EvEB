@@ -13,6 +13,8 @@ import re
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
+
+# INIT
 # updated by functions
 health_st = 100
 health_ar = 100
@@ -23,7 +25,37 @@ last_farm_site = 0
 last_inventory_value = 0
 interrupted_farming = 0
 
-# INIT
+module_icon_radius = 40
+color_white = [255, 255, 255, 255]
+# to be changed by user / fixed
+task = 'combat'
+start = 'from_station'
+preferredOrbit = 29
+planet = 0
+repeat = 0
+
+def read_config_file():
+    file = open('config.txt')
+    tmp = file.readline()
+    while tmp != '':
+        tmp = tmp.split()
+        if tmp[0] == 'preferredOrbit':
+            global preferredOrbit
+            preferredOrbit = int(tmp[1])
+        if tmp[0] == 'planet':
+            global planet
+            planet = int(tmp[1])
+        if tmp[0] == 'start:':
+            if tmp[1] == 'combat_from_station':
+                from_station()
+            if tmp[1] == 'combat_from_ano':
+                from_ano()
+            if tmp[1] == 'combat_from_system':
+                from_system()
+        tmp = file.readline()
+read_config_file()
+
+
 # connect to Bluestacks
 adb = Client(host='127.0.0.1', port=5037)
 devices = adb.devices()
@@ -53,7 +85,11 @@ def update_cs():
     CS_image = Image.open('screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
 def compare_colors(a, b):
-    return (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3])) / 255 / 4
+    fir = abs(int(a[0]) - int(b[0]))
+    sec = abs(int(a[1]) - int(b[1]))
+    thi = abs(int(a[2]) - int(b[2]))
+    fou = abs(int(a[3]) - int(b[3]))
+    return (fir + sec + thi + fou) / 10
 def get_point_in_circle(x, y, r):
     a = 3.  # shape
     angle = np.random.default_rng().random() * np.pi
@@ -97,13 +133,21 @@ def calibrate():
     while tmp != '':
         tmp = tmp.split()
         ar = cv.imread('modules\\' + tmp[0] + '.png')
-        print(tmp[0])
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
-        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-        if max_val > 0.99:
-            center = (max_loc[0] + int(tmp[2]), max_loc[1] + int(tmp[3]))
-            ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
-            # cv.circle(CS_cv, center, 40, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
+        threshold = 0.99
+        loc = np.where(result >= threshold)
+        previous_point_y, previous_point_x = 0, 0
+        accepted_list = []
+        for pt in zip(*loc[::-1]):
+            continue_value = 1
+            for point in accepted_list:
+                if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
+                    continue_value = 0
+            if continue_value == 1:
+                accepted_list.append(pt)
+                center = (pt[0] + int(tmp[2]), pt[1] + int(tmp[3]))
+                ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
+                cv.circle(CS_cv, center, 40, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
         tmp = file.readline()
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
@@ -262,7 +306,7 @@ def update_hp_helper(r, off, offset):
         angle = np.pi * (1.32 - 0.62 * tmp / precision)
         x = int(center_x + np.cos(angle) * r)
         y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) / 3 * off + offset)
-        cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp * 10), thickness=3, lineType=cv.LINE_4)
+        # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp * 10), thickness=3, lineType=cv.LINE_4)
         if CS_image[y][x][2] > 90:
             return int(100 - tmp / precision * 100)
         tmp += 1
@@ -366,13 +410,23 @@ def warp_to_ano():
     # swap to PvE
 def get_cargo():
     steps = 20
-    x, y, w = 4, 101, int(145 / steps)
+    x, y, w = 6, 105, int(145 / steps)
     # 0.55 match, 0.69 no match
-    dif = compare_colors(CS_image[y][x], color_white)
+    old_color = CS_image[y][x]
     for i in range(steps):
-        if compare_colors(CS_image[y][x + (i * w)], color_white) > 0.08 + dif:
-            return 100 * (i - 1) / steps
-    return 100
+        new_color = CS_image[y][x + (i * w)]
+        # cv.rectangle(CS_cv, (x + (i * w), y), (x + (i * w), y), color=(0, 255, i * 10), thickness=3, lineType=cv.LINE_4)
+        # print(compare_colors(new_color, old_color), new_color)
+        if compare_colors(new_color, old_color) > 9:
+            return 100 * i / steps
+        old_color = new_color
+    # cv.imshow('image', CS_cv)
+    # cv.waitKey(0)
+    # no contrast in there, have to work with colors:
+    cargo_yellow = [100, 100, 72, 255]
+    if compare_colors(CS_image[y][x + (i * w)], cargo_yellow) < 9:
+        return 100
+    return 0
 def get_capacitor():
     r_ca = - 80
     tmp = 1
@@ -462,15 +516,16 @@ def get_inventory_value():
     raw_text = re.sub('\D', '', raw_text)
     # click on close
     click_circle(1543, 51, 10)
+    print('current inventory value: ', int(raw_text))
     return int(raw_text)
 def get_autopilot():
     x_a, y_a, x_b, y_b, x_c, y_c = 71, 171, 71, 207, 37, 189
     autopilot_green = [66, 138, 122, 255]
     # check if autopilot is online (2 pixels because safety)
-    if compare_colors(CS_image[y_a][x_a], autopilot_green) < 0.1 and \
-            compare_colors(CS_image[y_b][x_b], autopilot_green) < 0.1:
+    if compare_colors(CS_image[y_a][x_a], autopilot_green) < 10 and \
+            compare_colors(CS_image[y_b][x_b], autopilot_green) < 10:
         # check if autopilot is running (should i just turn it on? nah)
-        if compare_colors(CS_image[y_c][x_c], autopilot_green) > 0.13:
+        if compare_colors(CS_image[y_c][x_c], autopilot_green) > 13:
             return 1
     return 0
 
@@ -492,6 +547,7 @@ def warp_to(distance, x, y, w, h):
     swipe_from_circle(x - 173, min(y + 146, 845), 40, distance, 0)
 def swap_filter(string_in_name):
     # swaps to a filter containing the given string
+    troubleshoot_filter_window()
     update_cs()
     # Filter Header, use the cv.imshow to see if it fits
     x, y, w, h = 1269, 10, 124, 53
@@ -534,7 +590,7 @@ def activate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
 
-    if compare_colors(CS_image[y][x], activate_blue) > 0.15 and compare_colors(CS_image[y][x], activate_red) > 0.15:
+    if compare_colors(CS_image[y][x], activate_blue) > 15 and compare_colors(CS_image[y][x], activate_red) > 15:
         click_circle(module[2], module[3], module_icon_radius)
         return 1
     return 0
@@ -542,7 +598,7 @@ def deactivate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - 40
 
-    if compare_colors(CS_image[y][x], activate_blue) < 0.15:
+    if compare_colors(CS_image[y][x], activate_blue) < 15:
         click_circle(module[2], module[3], module_icon_radius)
 def repair(desired_hp):
     # todo not tested
@@ -564,14 +620,18 @@ def repair(desired_hp):
                 activate_module(module)
             else:
                 deactivate_module(module)
-def flee(maximus_dist):
-    swap_filter('esc')
-    rng = random.random()
-    for i in range(maximus_dist + 1):
-        if rng < i / maximus_dist:
+def warp_to_random(maximum):
+    for i in range(maximum + 1):
+        rng = random.random()
+        if rng < i / maximum:
             click_rectangle(1210, 67 + 87 * (i - 1), 314, 88)
             click_rectangle(903, 168 + 87 * (i - 1), 301, 91)
             break
+def flee(maximus_dist):
+    global interrupted_farming
+    interrupted_farming = 1
+    swap_filter('esc')
+    warp_to_random(maximus_dist)
     for module in ModuleList:
         if module[1] == 'esc':
             activate_module(module)
@@ -590,7 +650,7 @@ def update_and_checkup_for_combat():
 def troubleshoot_filter_window():
     x, y = 1539, 504
     # match was about 0.22, no match was 0.64, match = need fix
-    if compare_colors(CS_image[504][1539], color_white) < 0.4:
+    if compare_colors(CS_image[504][1539], color_white) < 40:
         click_circle(x, y, 14)
     return
 def check_if_in_station():
@@ -774,7 +834,8 @@ def loot():
                 combat()
                 return
 
-            if get_cargo() >= 95:
+            if get_cargo() > 95:
+                print('cargo full')
                 go_home()
                 return
 
@@ -855,6 +916,7 @@ def combat():
                 if module[1] == 'situational':
                     activate_module(module)
 def solve_scouts():
+    playsound('assets\\sounds\\bell.wav')
     print('todo: solve_scouts')
     quit()
 
@@ -883,15 +945,12 @@ def from_system():
 def custom():
     # wait_end_navigation(6)
     calibrate()
-    warp_to_ano()
-    combat()
+    loot()
 
 
-# to be changed by user / fixed
-preferredOrbit = 29
-module_icon_radius = 40
-color_white = [255, 255, 255, 255]
-planet = 0
-repeat = 0
+show_player_for_confirmation()
+calibrate()
+for module in ModuleList:
+    print(module)
+# read_config_file()
 
-from_station()

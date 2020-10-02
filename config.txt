@@ -1,0 +1,7 @@
+start combat_from_station
+preferredOrbit 29
+client 0
+planet 0
+repeat 0
+device 0
+mining_time 60

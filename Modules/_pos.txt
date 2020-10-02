@@ -3,7 +3,7 @@ WebCruiser ignore 22 -6
 StabCruiser esc 13 13
 NosCruiser ignore 13 10
 DroneCruiser situational 20 19
-Drone3Cruiser drone 7 31
+Drone3Cruiser drone 6 33
 Drone4Cruiser drone -11 7
 RRailgunCruiser weapon 12 31
 Afterburner prop 9 23

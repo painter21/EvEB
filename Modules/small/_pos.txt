@@ -1,0 +1,2 @@
+Afterburner prop 8 16
+Miner harvest 13 15
