@@ -14,7 +14,6 @@ import re
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
-
 # INIT
 # updated by functions
 health_st = 100
@@ -36,9 +35,9 @@ start = 'from_station'
 preferredOrbit = 29
 planet = 0
 repeat = 0
-client = 0
 mining_time = 0
-device_nr = 0
+device_nr = 1
+name = ''
 
 
 def read_config_file():
@@ -55,9 +54,12 @@ def read_config_file():
         if tmp[0] == 'mining_time':
             global mining_time
             mining_time = int(tmp[1])
-        if tmp[0] == 'device_nr':
+        if tmp[0] == 'device':
             global device_nr
             device_nr = int(tmp[1])
+        if tmp[0] == 'name':
+            global name
+            name = tmp[1]
         tmp = file.readline()
 
 
@@ -132,7 +134,7 @@ def swipe_from_circle(x, y, r, d, direction):
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
     power_nap()
 def toggle_eco_mode():
-    subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_bronsen.ahk"])
+    subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 
 
 # INTERNAL HELPER FUNCTIONS
@@ -166,19 +168,21 @@ def show_player_for_confirmation():
     cv.imshow('tmp', crop_img)
     cv.waitKey()
 def calibrate():
+    global ModuleList
+    ModuleList = []
     file = open('modules\small\_pos.txt')
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
-        print(tmp)
         ar = cv.imread('modules\\small\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
-        threshold = 0.99
+        threshold = 0.95
         loc = np.where(result >= threshold)
         previous_point_y, previous_point_x = 0, 0
         accepted_list = []
         for pt in zip(*loc[::-1]):
             continue_value = 1
+            print(pt)
             for point in accepted_list:
                 if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
                     continue_value = 0
@@ -200,7 +204,7 @@ def get_autopilot():
     return 0
 def get_autopilot_active():
     x_c, y_c = 26, 121
-    if compare_colors(CS_image[y_c][x_c], inner_autopilot_green) > 13:
+    if compare_colors(CS_image[y_c][x_c], inner_autopilot_green) < 13:
         return 1
     return 0
 def activate_autopilot():
@@ -253,14 +257,13 @@ def deactivate_module(module):
         click_circle(module[2], module[3], module_icon_radius)
 def troubleshoot_filter_window():
     x, y = 923, 302
-    print(compare_colors(CS_image[y][x], color_white))
     # match was about 0.22, no match was 0.64, match = need fix
     if compare_colors(CS_image[y][x], color_white) < 40:
         click_circle(x, y, 10)
         return 1
     return 0
 def warp_to_random(maximum):
-    for i in range(maximum + 1):
+    for i in range(maximum):
         rng = random.random()
         if rng < i / maximum:
             click_rectangle(742, 47 + 51 * (i - 1), 158, 44)
@@ -272,6 +275,9 @@ def warp_to_random(maximum):
 def dump_cargo():
     # open inventory
     click_rectangle(5, 61, 83, 26)
+    time.sleep(1.5)
+    # venture cargo
+    click_rectangle(18, 393, 173, 41)
     time.sleep(1.5)
     # select all
     click_rectangle(701, 458, 68, 60)
@@ -300,9 +306,11 @@ def set_home():
     time.sleep(0.5)
     # click set des
     click_rectangle(138, 443, 185, 42)
-    time.sleep(1.5)
+    time.sleep(2)
     # click on close
-    click_circle(1543, 51, 10)
+    click_circle(925, 30, 15)
+    time.sleep(1)
+    click_circle(925, 30, 15)
 def set_system(target):
     # only works for pI location
     # click portrait
@@ -328,7 +336,9 @@ def mine_something(maximum):
     for i in range(maximum + 1):
         rng = random.random()
         if rng < i / maximum:
+            time.sleep(0.5)
             click_rectangle(742, 47 + 51 * (i - 1), 158, 44)
+            time.sleep(0.5)
             click_rectangle(546, 101 + 51 * (i - 1), 158, 44)
             time.sleep(1)
             click_rectangle(742, 47 + 51 * (i - 1), 158, 44)
@@ -336,11 +346,12 @@ def mine_something(maximum):
             for module in ModuleList:
                 if module[1] == 'prop':
                     activate_module(module)
-            time.sleep(10)
+            time.sleep(25)
             for module in ModuleList:
                 if module[1] == 'harvest':
                     activate_module(module)
             break
+    time.sleep(1)
 
 
 # STATES
@@ -368,6 +379,7 @@ def mining_from_station():
     time.sleep(15)
 
     print('calibrating')
+    update_cs()
     troubleshoot_filter_window()
     time.sleep(1)
     calibrate()
@@ -375,16 +387,17 @@ def mining_from_station():
 
     print('warp to site')
     swap_filter('esc')
-    warp_to_random(2)
+    time.sleep(2)
+    warp_to_random(4)
+    time.sleep(5)
+    warp_to_random(1)
     wait_warp()
+    time.sleep(4)
 
     print('mine something')
     # select some asteroid
     swap_filter('ining')
-    # activate modules
-    for module in ModuleList:
-        if module[1] == 'harvest':
-            activate_module()
+    mine_something(1)
 
     print('setting path home')
     # set home
@@ -397,9 +410,76 @@ def mining_from_station():
     time.sleep(mining_time)
     # deactivate eco mode
     toggle_eco_mode()
-    time.sleep(1)
+    time.sleep(5)
 
     print('going home')
+    update_cs()
+    # activate autopilot
+    activate_autopilot()
+    # wait until autopilot gone
+    wait_end_navigation(20)
+
+    print('arriving')
+    # dump ressources
+    dump_cargo()
+    # repeat?
+    if repeat == 0:
+        playsound('assets\\sounds\\bell.wav')
+        quit()
+    mining_from_station()
+    return
+def mining_from_station_in_null():
+    # set destination
+    set_system(planet)
+    # wait until autopilot gone
+    wait_end_navigation(20)
+    print('undocking')
+    click_rectangle(817, 165, 111, 26)
+    time.sleep(15)
+
+    print('calibrating')
+    update_cs()
+    troubleshoot_filter_window()
+    time.sleep(1)
+    calibrate()
+
+    print('going to system')
+    update_cs()
+    # activate autopilot
+    activate_autopilot()
+    # wait until autopilot gone
+    wait_end_navigation(20)
+
+    # warp to site todo: should implement get_list_size
+    print('warp to site')
+    swap_filter('esc')
+    time.sleep(2)
+    warp_to_random(4)
+    time.sleep(5)
+    warp_to_random(1)
+    wait_warp()
+    time.sleep(4)
+
+    print('mine something')
+    # select some asteroid
+    swap_filter('ining')
+    mine_something(1)
+
+    print('setting path home')
+    # set home
+    set_home()
+
+    print('waiting')
+    # eco mode
+    toggle_eco_mode()
+    # wait x time
+    time.sleep(mining_time)
+    # deactivate eco mode
+    toggle_eco_mode()
+    time.sleep(5)
+
+    print('going home')
+    update_cs()
     # activate autopilot
     activate_autopilot()
     # wait until autopilot gone
@@ -418,5 +498,13 @@ def main():
     show_player_for_confirmation()
     mining_from_station()
 
-main()
 
+# main()
+print('arriving')
+    # dump ressources
+    dump_cargo()
+    # repeat?
+    if repeat == 0:
+        playsound('assets\\sounds\\bell.wav')
+        quit()
+    mining_from_station()

@@ -53,12 +53,13 @@ def read_config_file():
             if tmp[1] == 'combat_from_system':
                 from_system()
         tmp = file.readline()
-read_config_file()
+# read_config_file()
 
 
 # connect to Bluestacks
 adb = Client(host='127.0.0.1', port=5037)
 devices = adb.devices()
+print(devices)
 if len(devices) == 0:
     print('no device attached')
     quit()
@@ -894,6 +895,7 @@ def combat():
                 if module[1] == 'drone':
                     # or weapon
                     if activate_module(module):
+                        print('activating drone successful')
                         # this orbit call should not be necessary, but sometimes it somehow misses orbit
                         orbit_enemy(0)
                         tmp_weapon = time.time() + 10
@@ -952,5 +954,6 @@ show_player_for_confirmation()
 calibrate()
 for module in ModuleList:
     print(module)
-# read_config_file()
+read_config_file()
+from_system()
 
