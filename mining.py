@@ -64,7 +64,7 @@ def read_config_file():
         tmp = file.readline()
 
 
-# read_config_file()
+read_config_file()
 
 # connect to Bluestacks
 adb = Client(host='127.0.0.1', port=5037)
