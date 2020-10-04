@@ -29,6 +29,7 @@ module_icon_radius = 30
 color_white = [255, 255, 255, 255]
 outer_autopilot_green = [46, 101, 122, 255]
 inner_autopilot_green = [155, 166, 158, 255]
+undock_yellow = [174, 147, 40, 255]
 # to be changed by user / fixed
 task = 'combat'
 start = 'from_station'
@@ -36,7 +37,7 @@ preferredOrbit = 29
 planet = 0
 repeat = 0
 mining_time = 0
-device_nr = 1
+device_nr = 0
 name = ''
 
 
@@ -63,7 +64,7 @@ def read_config_file():
         tmp = file.readline()
 
 
-read_config_file()
+# read_config_file()
 
 # connect to Bluestacks
 adb = Client(host='127.0.0.1', port=5037)
@@ -239,6 +240,41 @@ def swap_filter(string_in_name):
         swap_filter(string_in_name)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
+def is_capsule():
+    tmp_module_list = []
+    file = open('modules\small\_pos.txt')
+    tmp = file.readline()
+    while tmp != '':
+        tmp = tmp.split()
+        ar = cv.imread('modules\\small\\' + tmp[0] + '.png')
+        result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
+        threshold = 0.95
+        loc = np.where(result >= threshold)
+        previous_point_y, previous_point_x = 0, 0
+        accepted_list = []
+        for pt in zip(*loc[::-1]):
+            continue_value = 1
+            print(pt)
+            for point in accepted_list:
+                if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
+                    continue_value = 0
+            if continue_value == 1:
+                accepted_list.append(pt)
+                center = (pt[0] + int(tmp[2]), pt[1] + int(tmp[3]))
+                tmp_module_list.append([tmp[0], tmp[1], center[0], center[1]])
+                # cv.circle(CS_cv, center, module_icon_radius, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
+        tmp = file.readline()
+    if len(tmp_module_list) == 0:
+        return 1
+    return 0
+def is_in_station():
+    # basically checking for the huge undock symbol
+    x_a, y_a, x_b, y_b = 822, 174, 838, 174
+    print(compare_colors(CS_image[y_a][x_a], undock_yellow))
+    if compare_colors(CS_image[y_a][x_a], undock_yellow) < 8 and \
+            compare_colors(CS_image[y_b][x_b], undock_yellow) < 8:
+        return 1
+    return 0
 
 # INTERFACE HELPER FUNCTIONS
 def activate_module(module):
@@ -264,10 +300,12 @@ def troubleshoot_filter_window():
     return 0
 def warp_to_random(maximum):
     for i in range(maximum):
+        j = i + 1
         rng = random.random()
-        if rng < i / maximum:
-            click_rectangle(742, 47 + 51 * (i - 1), 158, 44)
-            click_rectangle(543, 101 + 51 * (i - 1), 174, 55)
+        if rng < (j + 1) / maximum:
+            print('true')
+            click_rectangle(742, 47 + 51 * i, 158, 44)
+            click_rectangle(543, 101 + 51 * i, 174, 55)
             break
 
 
@@ -412,6 +450,13 @@ def mining_from_station():
     toggle_eco_mode()
     time.sleep(5)
 
+    print('checking if dead')
+    if is_capsule() or is_in_station():
+        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+        absolutely_professional_database.write(name + ' died at:' + str(time.time()))
+        absolutely_professional_database.close()
+        quit()
+
     print('going home')
     update_cs()
     # activate autopilot
@@ -454,7 +499,7 @@ def mining_from_station_in_null():
     print('warp to site')
     swap_filter('esc')
     time.sleep(2)
-    warp_to_random(4)
+    warp_to_random(1)
     time.sleep(5)
     warp_to_random(1)
     wait_warp()
@@ -499,12 +544,4 @@ def main():
     mining_from_station()
 
 
-# main()
-print('arriving')
-    # dump ressources
-    dump_cargo()
-    # repeat?
-    if repeat == 0:
-        playsound('assets\\sounds\\bell.wav')
-        quit()
-    mining_from_station()
+main()

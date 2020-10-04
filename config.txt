@@ -1,8 +1,7 @@
 start combat_from_station
 preferredOrbit 29
-client 1
 planet 0
 repeat 1
-device 1
+device 0
 name kort
 mining_time 660
