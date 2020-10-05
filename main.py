@@ -53,7 +53,7 @@ def read_config_file():
             if tmp[1] == 'combat_from_system':
                 from_system()
         tmp = file.readline()
-# read_config_file()
+read_config_file()
 
 
 # connect to Bluestacks
@@ -281,6 +281,9 @@ def choose_anomaly():
     for ano in ano_list:
         if ano[0] == 'scout':
             playsound('assets\\sounds\\bell.wav')
+            return ano
+    for ano in ano_list:
+        if ano[1] == 4:
             return ano
     for ano in ano_list:
         if ano[1] == 5:
@@ -951,9 +954,5 @@ def custom():
 
 
 show_player_for_confirmation()
-calibrate()
-for module in ModuleList:
-    print(module)
-read_config_file()
 from_system()
 

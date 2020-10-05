@@ -10,7 +10,6 @@ from numpy import random
 from PIL import Image
 from playsound import playsound
 import os
-import re
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
@@ -39,6 +38,7 @@ repeat = 0
 mining_time = 0
 device_nr = 0
 name = ''
+home = 0
 
 
 def read_config_file():
@@ -49,6 +49,9 @@ def read_config_file():
         if tmp[0] == 'planet':
             global planet
             planet = int(tmp[1])
+        if tmp[0] == 'home':
+            global home
+            home = int(tmp[1])
         if tmp[0] == 'repeat':
             global repeat
             repeat = int(tmp[1])
@@ -136,6 +139,36 @@ def swipe_from_circle(x, y, r, d, direction):
     power_nap()
 def toggle_eco_mode():
     subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
+def remove_bright_pix(image):
+    # remove darker pixels
+    row_count = -1
+    for row in image:
+        row_count += 1
+        pixel_count = -1
+        for pixel in row:
+            pixel_count += 1
+            brightness = 0
+            for color in pixel:
+                brightness += color
+            if brightness < 250:
+                image[row_count][pixel_count] = [0, 0, 0]
+    return image
+def compare_image(image1, image2):
+    # image2 muss kleiner oder im idealfall gleich groß wie image1 sein
+    diff = 0
+    count = 0
+    row_count = -1
+    for row in image1:
+        row_count += 1
+        pixel_count = -1
+        for pixel in row:
+            pixel_count += 1
+            color_count = -1
+            for color in pixel:
+                color_count += 1
+                diff += abs(color - image2[row][pixel][color])
+                count += 1
+    return int(diff*100/count)
 
 
 # INTERNAL HELPER FUNCTIONS
@@ -179,7 +212,6 @@ def calibrate():
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         threshold = 0.95
         loc = np.where(result >= threshold)
-        previous_point_y, previous_point_x = 0, 0
         accepted_list = []
         for pt in zip(*loc[::-1]):
             continue_value = 1
@@ -250,7 +282,6 @@ def is_capsule():
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         threshold = 0.95
         loc = np.where(result >= threshold)
-        previous_point_y, previous_point_x = 0, 0
         accepted_list = []
         for pt in zip(*loc[::-1]):
             continue_value = 1
@@ -275,6 +306,220 @@ def is_in_station():
             compare_colors(CS_image[y_b][x_b], undock_yellow) < 8:
         return 1
     return 0
+def get_list_asteroid():
+    # swap_filter('ining')
+    # todo: ignore closest ano
+    # click filter element to expand filter
+    # click_rectangle(740, 46, 161, 269)
+    list_ano = []
+
+    update_cs()
+
+    # create a list of all anomaly locations (on screen)
+    x, y, w, h = 731, 49, 10, 474
+    img_ano = cv.imread('assets\\ast.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    crop_img = remove_bright_pix(crop_img)
+    result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
+    threshold = 0.8
+    loc = np.where(result >= threshold)
+    # black magic do not touch
+    previous_point_y = -10
+    for pt in zip(*loc[::-1]):
+        # ignore double results
+        if pt[1] > previous_point_y + 10:
+            previous_point_y = pt[1]
+            # icon offset, size of text field
+            y_text, x_text = pt[1] - 12 + y, pt[0] + 59 + x
+            crop_img = CS_cv[y_text:y_text + 33, x_text:x_text + 117]
+            # cv.rectangle(CS_cv, (pt[0] + x, pt[1] + y), (pt[0] + x, pt[1] + y), (0, 0, 255), 2)
+
+            # remove darker pixels
+            crop_img = remove_bright_pix(crop_img)
+
+            raw_text = tess.image_to_string(crop_img)
+            print(raw_text.strip())
+            # cv.imshow('.', crop_img)
+            # cv.waitKey()
+
+            # Todo: i should improve that at some point
+            x_ano_field, y_ano_field = pt[0] + x, pt[1] + y - 21
+            if 'spa' in raw_text or 'dsp' in raw_text:
+                list_ano.append(['veldspar', x_ano_field, y_ano_field, 170, 50])
+            else:
+                if 'gio' in raw_text or 'ase' in raw_text:
+                    list_ano.append(['plagioclase', x_ano_field, y_ano_field, 170, 50])
+                else:
+                    if 'mber' in raw_text:
+                        list_ano.append(['omber', x_ano_field, y_ano_field, 170, 50])
+                    else:
+                        if 'nite' in raw_text or 'kern' in raw_text:
+                            list_ano.append(['kernite', x_ano_field, y_ano_field, 170, 50])
+                        else:
+                            if 'ord' in raw_text or 'dite' in raw_text:
+                                list_ano.append(['scordite', x_ano_field, y_ano_field, 170, 50])
+                            else:
+
+                                if 'res' in raw_text or 'rox' in raw_text:
+                                    list_ano.append(['pyroxeres', x_ano_field, y_ano_field, 170, 50])
+                                else:
+                                    if 'odu' in raw_text or 'mai' in raw_text:
+                                        list_ano.append(['spodumain', x_ano_field, y_ano_field, 170, 50])
+                                    else:
+                                        if 'orph' in raw_text:
+                                            list_ano.append(['hemorphite', x_ano_field, y_ano_field, 170, 50])
+                                        else:
+                                            if 'ark' in raw_text or 'ork' in raw_text or 'och' in raw_text:
+                                                list_ano.append(['dark_ochre', x_ano_field, y_ano_field, 170, 50])
+                                            else:
+                                                if 'nei' in raw_text:
+                                                    list_ano.append(['gneiss', x_ano_field, y_ano_field, 170, 50])
+                                                else:
+
+                                                    if 'asp' in raw_text :
+                                                        list_ano.append(['jaspet', x_ano_field, y_ano_field, 170, 50])
+                                                    else:
+                                                        if 'kit' in raw_text:
+                                                            list_ano.append(
+                                                                ['crokite', x_ano_field, y_ano_field, 170, 50])
+                                                        else:
+                                                            if 'git' in raw_text:
+                                                                list_ano.append(
+                                                                    ['hedbergite', x_ano_field, y_ano_field, 170, 50])
+                                                            else:
+                                                                if 'tot' in raw_text or 'ist' in raw_text:
+                                                                    list_ano.append(
+                                                                        ['bistot', x_ano_field, y_ano_field, 170, 50])
+                                                                else:
+                                                                    if 'kon' in raw_text or 'ark' in raw_text:
+                                                                        list_ano.append(
+                                                                            ['arkonor', x_ano_field, y_ano_field, 170,
+                                                                             50])
+                                                                    else:
+                                                                        if 'rco' in raw_text or 'mer' in raw_text:
+                                                                            list_ano.append(
+                                                                                ['mercoxit', x_ano_field, y_ano_field, 170, 50])
+                                                                        else:
+                                                                            list_ano.append(
+                                                                                ['unknown', x_ano_field, y_ano_field, 170, 50])
+            # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
+    for ano in list_ano:
+        print(ano)
+    cv.imshow('.', CS_cv)
+    cv.waitKey()
+    return list_ano
+def get_sec_asteroid():
+    # idee ist es, prezise die location für den text zu finden und diese mit einem bild des textes mittels selbst
+    # gebastelter funktion abzugleichen
+    # swap_filter('ining')
+    # todo: ignore closest ano
+    # click filter element to expand filter
+    # click_rectangle(740, 46, 161, 269)
+    list_ano = []
+
+    update_cs()
+
+    # create a list of all anomaly locations (on screen)
+    x, y, w, h = 731, 49, 10, 474
+    img_ano = cv.imread('assets\\ast.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    crop_img = remove_bright_pix(crop_img)
+    result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
+    threshold = 0.8
+    loc = np.where(result >= threshold)
+    # black magic do not touch
+    previous_point_y = -10
+    for pt in zip(*loc[::-1]):
+        # ignore double results
+        if pt[1] > previous_point_y + 10:
+            previous_point_y = pt[1]
+            # icon offset, size of text field
+            y_text, x_text = pt[1] - 12 + y, pt[0] + 59 + x
+            crop_img = CS_cv[y_text:y_text + 33, x_text:x_text + 117]
+            # cv.rectangle(CS_cv, (pt[0] + x, pt[1] + y), (pt[0] + x, pt[1] + y), (0, 0, 255), 2)
+
+            # remove darker pixels
+            crop_img = remove_bright_pix(crop_img)
+
+            raw_text = tess.image_to_string(crop_img)
+            print(raw_text.strip())
+            # cv.imshow('.', crop_img)
+            # cv.waitKey()
+
+            # Todo: i should improve that at some point
+            x_ano_field, y_ano_field = pt[0] + x, pt[1] + y - 21
+            if 'spa' in raw_text or 'dsp' in raw_text:
+                list_ano.append(['veldspar', x_ano_field, y_ano_field, 170, 50])
+            else:
+                if 'gio' in raw_text or 'ase' in raw_text:
+                    list_ano.append(['plagioclase', x_ano_field, y_ano_field, 170, 50])
+                else:
+                    if 'mber' in raw_text:
+                        list_ano.append(['omber', x_ano_field, y_ano_field, 170, 50])
+                    else:
+                        if 'nite' in raw_text or 'kern' in raw_text:
+                            list_ano.append(['kernite', x_ano_field, y_ano_field, 170, 50])
+                        else:
+                            if 'ord' in raw_text or 'dite' in raw_text:
+                                list_ano.append(['scordite', x_ano_field, y_ano_field, 170, 50])
+                            else:
+
+                                if 'res' in raw_text or 'rox' in raw_text:
+                                    list_ano.append(['pyroxeres', x_ano_field, y_ano_field, 170, 50])
+                                else:
+                                    if 'odu' in raw_text or 'mai' in raw_text:
+                                        list_ano.append(['spodumain', x_ano_field, y_ano_field, 170, 50])
+                                    else:
+                                        if 'orph' in raw_text:
+                                            list_ano.append(['hemorphite', x_ano_field, y_ano_field, 170, 50])
+                                        else:
+                                            if 'ark' in raw_text or 'ork' in raw_text or 'och' in raw_text:
+                                                list_ano.append(['dark_ochre', x_ano_field, y_ano_field, 170, 50])
+                                            else:
+                                                if 'nei' in raw_text:
+                                                    list_ano.append(['gneiss', x_ano_field, y_ano_field, 170, 50])
+                                                else:
+
+                                                    if 'asp' in raw_text :
+                                                        list_ano.append(['jaspet', x_ano_field, y_ano_field, 170, 50])
+                                                    else:
+                                                        if 'kit' in raw_text:
+                                                            list_ano.append(
+                                                                ['crokite', x_ano_field, y_ano_field, 170, 50])
+                                                        else:
+                                                            if 'git' in raw_text:
+                                                                list_ano.append(
+                                                                    ['hedbergite', x_ano_field, y_ano_field, 170, 50])
+                                                            else:
+                                                                if 'tot' in raw_text or 'ist' in raw_text:
+                                                                    list_ano.append(
+                                                                        ['bistot', x_ano_field, y_ano_field, 170, 50])
+                                                                else:
+                                                                    if 'kon' in raw_text or 'ark' in raw_text:
+                                                                        list_ano.append(
+                                                                            ['arkonor', x_ano_field, y_ano_field, 170,
+                                                                             50])
+                                                                    else:
+                                                                        if 'rco' in raw_text or 'mer' in raw_text:
+                                                                            list_ano.append(
+                                                                                ['mercoxit', x_ano_field, y_ano_field, 170, 50])
+                                                                        else:
+                                                                            list_ano.append(
+                                                                                ['unknown', x_ano_field, y_ano_field, 170, 50])
+            # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
+    for ano in list_ano:
+        print(ano)
+    cv.imshow('.', CS_cv)
+    cv.waitKey()
+    return list_ano
+def get_good_asteroid_from_list(ast_list):
+    file = open('ore_pref.txt')
+    tmp = file.readline().strip()
+    while tmp != '':
+        for ast in ast_list:
+            if ast[0] == tmp:
+                return ast
+        tmp = file.readline()
 
 # INTERFACE HELPER FUNCTIONS
 def activate_module(module):
@@ -337,7 +582,7 @@ def set_home():
     click_rectangle(12, 493, 182, 36)
     time.sleep(2.5)
     # click on station
-    click_rectangle(12, 182, 181, 70)
+    click_rectangle(12, 101 + home * 80, 182, 70)
     time.sleep(2)
     # click on set des
     click_rectangle(525, 461, 71, 55)
@@ -399,10 +644,10 @@ def wait_end_navigation(safety_time):
         update_cs()
         if not get_autopilot():
             # for stargate warps
-            time.sleep(5)
+            time.sleep(10)
             update_cs()
             if not get_autopilot():
-                time.sleep(5)
+                time.sleep(10)
                 update_cs()
                 if not get_autopilot():
                     return 1
@@ -542,6 +787,39 @@ def mining_from_station_in_null():
 def main():
     show_player_for_confirmation()
     mining_from_station()
+def custom():
+    update_cs()
+    troubleshoot_filter_window()
+    time.sleep(1)
+    calibrate()
+    print('waiting')
+    # eco mode
+    toggle_eco_mode()
+    # wait x time
+    time.sleep(mining_time)
+    # deactivate eco mode
+    toggle_eco_mode()
+    time.sleep(5)
 
+    print('checking if dead')
+    if is_capsule() or is_in_station():
+        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+        absolutely_professional_database.write(name + ' died at:' + str(time.time()))
+        absolutely_professional_database.close()
+        quit()
 
-main()
+    print('going home')
+    update_cs()
+    # activate autopilot
+    activate_autopilot()
+    # wait until autopilot gone
+    wait_end_navigation(20)
+
+    print('arriving')
+    # dump ressources
+    dump_cargo()
+
+# main()
+update_cs()
+dalist = get_list_asteroid()
+print(get_good_asteroid_from_list(dalist))
