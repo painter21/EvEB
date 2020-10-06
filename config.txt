@@ -2,7 +2,7 @@ start combat_from_station
 preferredOrbit 29
 planet 0
 repeat 1
-device 1
+device 0
 mining_time 60
 name kort
 home 1

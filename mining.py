@@ -40,6 +40,7 @@ device_nr = 1
 name = ''
 home = 0
 bait = 0
+time_stamp = time.time()
 
 
 def read_config_file():
@@ -366,10 +367,10 @@ def get_list_asteroid():
 
             # template gen
             # remove darker pixels, seems to be a bad idea
-            crop_img = remove_bright_pix(crop_img, 75)
-            cv.imwrite('test.png', crop_img)
-            cv.imshow('.', crop_img)
-            cv.waitKey()
+            # crop_img = remove_bright_pix(crop_img, 75)
+            # cv.imwrite('test.png', crop_img)
+            # cv.imshow('.', crop_img)
+            # cv.waitKey()
 
             list_ast.append([read_asteroid(crop_img), x_text - 40, y_text-4, 150, 35])
             cv.rectangle(CS_cv, (x_text - 40, y_text-4), (x_text - 40 + 150, y_text-4 + 35), (0, 0, 255), 2)
@@ -435,7 +436,72 @@ def warp_to_random(maximum):
             click_rectangle(742, 47 + 51 * i, 158, 44)
             click_rectangle(543, 101 + 51 * i, 174, 55)
             return
+def find_filter_icon(filter_name):
+    x, y, w, h = 932, 40, 5, 277
+    crop_img = CS_cv[y:y + h, x:x + w]
+    for icon_file in os.listdir('assets\\filter_icons\\'):
+        if filter_name in icon_file:
+            image2 = cv.imread('assets\\filter_icons\\' + icon_file)
+            result = cv.matchTemplate(crop_img, image2, cv.TM_CCORR_NORMED)
+            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+            print(max_val)
+            if max_val > 0.99:
+                return max_loc[0] + x, max_loc[1] + y
+    return 0
+def waiting():
+    global bait
+    if time_stamp < time.time():
+        return
+    if bait == 0:
+        # eco mode
+        toggle_eco_mode()
+        # wait x time
+        time.sleep(mining_time)
+        # deactivate eco mode
+        toggle_eco_mode()
+        time.sleep(5)
+    else:
+        update_cs()
+        if find_filter_icon('all_ships') != 0:
+            subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+                             "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
+            playsound('assets\\sounds\\bell.wav')
+            print('trap card activated')
+            time.sleep(4)
+            toggle_eco_mode()
+            bait = 0
+        time.sleep(2)
+    waiting()
 
+
+def mine():
+    # select some asteroid
+    update_cs()
+    swap_filter('inin')
+    update_cs()
+    tmp = find_filter_icon('asteroid')
+    click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
+    update_cs()
+    a_list = get_list_asteroid()
+    asteroid = get_good_asteroid_from_list(a_list)
+    print('mining ', asteroid)
+
+    # click filter element to expand filter
+    click_rectangle(740, 46, 161, 269)
+
+    asteroid.pop(0)
+
+    # click filter element to expand filter
+    click_rectangle(740, 46, 161, 269)
+    time.sleep(0.5)
+    click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
+    click_rectangle(asteroid[0] - 185, min(315, asteroid[1]) + 58, asteroid[2], asteroid[3])
+
+    # click filter element to expand filter
+    click_rectangle(740, 46, 161, 269)
+    time.sleep(1)
+    click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
+    click_rectangle(asteroid[0] - 185, min(315, asteroid[1]), asteroid[2], asteroid[3])
 
 # PLAIN SCRIPTS
 def dump_cargo():
@@ -562,30 +628,7 @@ def mining_from_station():
     time.sleep(4)
 
     print('mine something')
-    # select some asteroid
-    update_cs()
-    swap_filter('inin')
-    update_cs()
-    dalist = get_list_asteroid()
-    asteroid = get_good_asteroid_from_list(dalist)
-    print('mining ', asteroid)
-
-    # click filter element to expand filter
-    click_rectangle(740, 46, 161, 269)
-
-    asteroid.pop(0)
-
-    # click filter element to expand filter
-    click_rectangle(740, 46, 161, 269)
-    time.sleep(0.5)
-    click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
-    click_rectangle(asteroid[0] - 185, min(250, asteroid[1]) + 58, asteroid[2], asteroid[3])
-
-    # click filter element to expand filter
-    click_rectangle(740, 46, 161, 269)
-    time.sleep(1)
-    click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
-    click_rectangle(asteroid[0] - 185, min(250, asteroid[1]), asteroid[2], asteroid[3])
+    mine()
 
     print('setting path home')
     # set home
@@ -598,13 +641,9 @@ def mining_from_station():
             activate_module(module)
 
     print('waiting')
-    # eco mode
-    toggle_eco_mode()
-    # wait x time
-    time.sleep(mining_time)
-    # deactivate eco mode
-    toggle_eco_mode()
-    time.sleep(5)
+    global time_stamp
+    time_stamp = time.time() + mining_time
+    waiting()
 
     print('checking if dead')
     update_cs()
@@ -698,30 +737,10 @@ def main():
     show_player_for_confirmation()
     mining_from_station()
 def custom():
-    update_cs()
-    swap_filter('inin')
-    update_cs()
-    dalist = get_list_asteroid()
-    asteroid = get_good_asteroid_from_list(dalist)
-    print(asteroid)
-    asteroid.pop(0)
-    print(asteroid)
+    mine()
 
-    # click filter element to expand filter
-    click_rectangle(740, 46, 161, 269)
-    time.sleep(0.5)
-    click_rectangle(asteroid[0], min(300, asteroid[1]), asteroid[2], asteroid[3])
-    time.sleep(0.5)
-    click_rectangle(asteroid[0] - 185, min(300, asteroid[1]) + 58, asteroid[2], asteroid[3])
-
-    # click filter element to expand filter
-    click_rectangle(740, 46, 161, 269)
-    time.sleep(1)
-    click_rectangle(asteroid[0], min(300, asteroid[1]), asteroid[2], asteroid[3])
-    click_rectangle(asteroid[0] - 185, min(300, asteroid[1]), asteroid[2], asteroid[3])
-
-# main()
-as_list = get_list_asteroid()
-for ast in as_list:
-    print(ast)
+main()
+#as_list = get_list_asteroid()
+#for ast in as_list:
+#    print(ast)
 

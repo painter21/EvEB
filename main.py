@@ -73,7 +73,6 @@ CS_cv = cv.imread('screen.png')
 CS_image = Image.open('screen.png')
 CS_image = np.array(CS_image, dtype=np.uint8)
 
-
 # BASIC FUNCTIONS
 def power_nap():
     time.sleep(np.random.default_rng().random() * 0.3 + 0.3)
