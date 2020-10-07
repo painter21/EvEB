@@ -93,7 +93,8 @@ def get_player_thread():
     crop_img = CS_cv[y:y + h, x:x + w]
     result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    if max_val > 0.999:
+    print(max_val)
+    if max_val > 0.99:
         return 1
     return 0
 
