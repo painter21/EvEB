@@ -45,15 +45,8 @@ def read_config_file():
         if tmp[0] == 'planet':
             global planet
             planet = int(tmp[1])
-        if tmp[0] == 'start:':
-            if tmp[1] == 'combat_from_station':
-                from_station()
-            if tmp[1] == 'combat_from_ano':
-                from_ano()
-            if tmp[1] == 'combat_from_system':
-                from_system()
         tmp = file.readline()
-read_config_file()
+# read_config_file()
 
 
 # connect to Bluestacks
@@ -944,6 +937,7 @@ def from_system():
     for module in ModuleList:
         print(module)
     show_player_for_confirmation()
+    print('test')
     warp_to_ano()
     combat()
 def custom():
@@ -951,7 +945,5 @@ def custom():
     calibrate()
     loot()
 
-
-show_player_for_confirmation()
 from_system()
 

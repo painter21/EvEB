@@ -1,10 +1,10 @@
 start custom
-random_warp 4
 preferredOrbit 29
+random_warp 4 für mining
 planet 0
 repeat 1
-device 0
-mining_time 120
+device 1
+mining_time 550
 name kort
-home 1
+home 2
 bait 0
