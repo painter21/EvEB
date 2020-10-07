@@ -13,37 +13,57 @@ import os
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 
-# INIT
-# updated by functions
-health_st = 100
-health_ar = 100
-health_sh = 100
-ModuleList = []
-start_farm_time = time.time()
-last_farm_site = 0
-last_inventory_value = 0
-interrupted_farming = 0
+# INIT GLOBAL VALUES
+if 1:
+    # updated by functions
+    health_st = 100
+    health_ar = 100
+    health_sh = 100
+    ModuleList = []
+    start_farm_time = time.time()
+    last_farm_site = 0
+    last_inventory_value = 0
+    interrupted_farming = 0
+    eco_mode = 0
 
-module_icon_radius = 30
-color_white = [255, 255, 255, 255]
-outer_autopilot_green = [46, 101, 122, 255]
-inner_autopilot_green = [155, 166, 158, 255]
-undock_yellow = [174, 147, 40, 255]
-# to be changed by user / fixed
-task = 'combat'
-start = 'from_station'
-preferredOrbit = 29
-planet = 0
-repeat = 0
-mining_time = 0
-device_nr = 1
-name = ''
-home = 0
-bait = 0
-random_warp = 1
-time_stamp = time.time()
+    module_icon_radius = 30
+    color_white = [255, 255, 255, 255]
+    outer_autopilot_green = [46, 101, 122, 255]
+    inner_autopilot_green = [155, 166, 158, 255]
+    undock_yellow = [174, 147, 40, 255]
 
+    # to be changed by user / fixed
+    start = 'main'
+    preferredOrbit = 29
+    planet = 0
+    repeat = 0
+    mining_time = 0
+    device_nr = 1
+    name = ''
+    home = 0
+    bait = 0
+    random_warp = 1
+    time_stamp = time.time()
 
+# BLUESTACKS CONNECT
+if 1:
+    # connect to Bluestacks
+    adb = Client(host='127.0.0.1', port=5037)
+    devices = adb.devices()
+    if len(devices) < device_nr + 1:
+        print('no device attached')
+        quit()
+    # CS = current Screenshot
+    print(devices)
+    device = devices[device_nr]
+    CS = device.screencap()
+    with open('screen.png', 'wb') as f:
+        f.write(CS)
+    CS_cv = cv.imread('screen.png')
+    CS_image = Image.open('screen.png')
+    CS_image = np.array(CS_image, dtype=np.uint8)
+
+# BASIC FUNCTIONS
 def read_config_file():
     print('update config')
     file = open('config.txt')
@@ -75,30 +95,10 @@ def read_config_file():
             global bait
             bait = int(tmp[1])
             print('bait ', bait)
+        if tmp[0] == 'start':
+            global start
+            start = tmp[1]
         tmp = file.readline()
-
-
-read_config_file()
-
-# connect to Bluestacks
-adb = Client(host='127.0.0.1', port=5037)
-devices = adb.devices()
-if len(devices) < device_nr + 1:
-    print('no device attached')
-    quit()
-# CS = current Screenshot
-print(devices)
-device = devices[device_nr]
-CS = device.screencap()
-with open('screen.png', 'wb') as f:
-    f.write(CS)
-CS_cv = cv.imread('screen.png')
-CS_cv_copy = CS_cv
-CS_image = Image.open('screen.png')
-CS_image = np.array(CS_image, dtype=np.uint8)
-
-
-# BASIC FUNCTIONS
 def power_nap():
     time.sleep(np.random.default_rng().random() * 0.3 + 0.5)
 def device_update_cs():
@@ -151,6 +151,8 @@ def device_swipe_from_circle(x, y, r, d, direction):
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
     power_nap()
 def device_toggle_eco_mode():
+    global eco_mode
+    eco_mode = 1 - eco_mode
     subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 
 def image_remove_dark(image, border):
@@ -464,9 +466,6 @@ def mine():
     asteroid = get_good_asteroid_from_list(a_list)
     print('mining ', asteroid)
 
-    # click filter element to expand filter
-    device_click_rectangle(740, 46, 161, 269)
-
     asteroid.pop(0)
 
     # click filter element to expand filter
@@ -544,66 +543,23 @@ def set_pi_planet_for_autopilot(target):
     # confirm
     device_click_rectangle(1318, 641, 253, 87)
 
-
-# STATES
-def waiting():
-    global bait
-    if time_stamp < time.time():
-        return 0
-    if bait == 0:
-        device_update_cs()
-        if get_filter_icon('all_ships') != 0:
-            # playsound('assets\\sounds\\bell.wav')
-            print('got ganked')
-            return 1
-        time.sleep(3)
-        return waiting()
-    else:
-        device_update_cs()
-        if get_filter_icon('all_ships') != 0:
-            subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
-                             "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
-            playsound('assets\\sounds\\bell.wav')
-            print('trap card activated')
-            bait = 0
-            return 1
-        time.sleep(2)
-        return waiting()
-def wait_end_navigation(safety_time):
-    print('wait for navigation')
-    while 1:
-        device_update_cs()
-        if not get_autopilot():
-            # for stargate warps
-            time.sleep(10)
-            device_update_cs()
-            if not get_autopilot():
-                time.sleep(10)
-                device_update_cs()
-                if not get_autopilot():
-                    return 1
-        time.sleep(safety_time)
-def main():
-    interface_show_player()
-    mining_from_station()
-def custom():
-    speed_x, speed_y = 495, 460
-    add_rectangle(speed_y, speed_x, 1, 1)
-    cv.imshow('.', CS_cv)
-    cv.waitKey()
-
-
 # TASKS
 def mining_from_station():
     # set destination
     # set_system(planet)
     # wait until autopilot gone
     # wait_end_navigation(20)
+
+    # clear popup
+    if get_is_in_station():
+        device_click_circle(818, 87, 10)
+        time.sleep(2)
+
     print('undocking')
     device_click_rectangle(817, 165, 111, 26)
     time.sleep(25)
 
-    # sometimes the speed meter gets broken, reodkc to fix
+    # sometimes the speed meter gets broken, redock to fix
     device_update_cs()
     speed_x, speed_y = 460, 495
     print('speed-o-meter value: ', CS_cv[speed_y][speed_x][2])
@@ -618,10 +574,9 @@ def mining_from_station():
 
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
-    time.sleep(5)
     update_modules()
-    # warp to site todo: should implement get_list_size
 
+    # warp to site todo: should implement get_list_size
     print('warp to site')
     set_filter('esc')
     time.sleep(2)
@@ -631,31 +586,16 @@ def mining_from_station():
     wait_warp()
     time.sleep(4)
 
-    print('mine something')
-    mine()
-
-    print('setting path home')
-    # set home
-    set_home()
-    time.sleep(3)
-
     print('activating prop')
     for module in ModuleList:
         if module[1] == 'prop':
             activate_module(module)
     time.sleep(25)
 
-    print('turning on miners')
-    for module in ModuleList:
-        if module[1] == 'harvest':
-            activate_module(module)
-
-    print('waiting')
-    device_toggle_eco_mode()
+    print('start belt_handling')
     global time_stamp
     time_stamp = time.time() + mining_time
-    got_ganked = waiting()
-    device_toggle_eco_mode()
+    got_ganked = in_belt()
 
     # activate autopilot and run (maybe i got ganked?)
     activate_autopilot()
@@ -712,51 +652,112 @@ def mining_from_station_in_null():
     # wait until autopilot gone
     wait_end_navigation(20)
 
-    # warp to site todo: should implement get_list_size
-    print('warp to site')
-    set_filter('esc')
-    time.sleep(2)
-    warp_to_random(1)
-    time.sleep(5)
-    warp_to_random(1)
-    wait_warp()
-    time.sleep(4)
+    print('todo')
+    # todo
 
-    print('mine something')
-    # select some asteroid
-    set_filter('ining')
-    mine()
 
-    print('setting path home')
-    # set home
-    set_home()
-
-    print('waiting')
-    # eco mode
-    device_toggle_eco_mode()
-    # wait x time
-    time.sleep(mining_time)
-    # deactivate eco mode
-    device_toggle_eco_mode()
-    time.sleep(5)
-
-    print('going home')
+# STATES
+def in_belt():
+    print('in belt: ', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)))
     device_update_cs()
-    # activate autopilot
-    activate_autopilot()
-    # wait until autopilot gone
-    wait_end_navigation(20)
 
-    print('arriving')
-    # dump ressources
-    dump_cargo()
-    # repeat?
-    if repeat == 0:
-        playsound('assets\\sounds\\bell.wav')
-        quit()
+    # todo: get cargo
+    # todo: testing
+
+    # check if time is up
+    if time_stamp < time.time():
+        device_toggle_eco_mode()
+        return 0
+
+    # check if mining equipment is busy/ easily activated
+    # if not, deactivate eco_state and start mining
+    miners_active = 1
+    for module in ModuleList:
+        if module[1] == 'harvest':
+            if activate_module(module):
+                if eco_mode:
+                    time.sleep(10)
+                else:
+                    time.sleep(3)
+                device_update_cs()
+                if activate_module(module):
+                    miners_active = 0
+                    break
+                    # todo that break needs testing
+    if not miners_active:
+        if eco_mode:
+            device_toggle_eco_mode()
+        time.sleep(3)
+        print('searching for asteroid')
+        mine()
+        time.sleep(15)
+        return in_belt()
+    else:
+        # set state to stable
+        if not eco_mode:
+            device_toggle_eco_mode()
+            return in_belt()
+
+    # check if autopilot is available
+    if not get_autopilot():
+        print('setting path home')
+        if eco_mode:
+            device_toggle_eco_mode()
+            time.sleep(2)
+            # set home
+        set_home()
+        if eco_mode:
+            device_toggle_eco_mode()
+            time.sleep(3)
+
+
+    print('small handling', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)))
+    for i in range(25):
+        device_update_cs()
+        if get_filter_icon('all_ships') != 0:
+            if bait == 1:
+                subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+                                 "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
+                playsound('assets\\sounds\\bell.wav')
+                print('trap card activated')
+                device_toggle_eco_mode()
+                time.sleep(3)
+                return 1
+            device_toggle_eco_mode()
+            print('ganked')
+            return 1
+        time.sleep(2)
+    return in_belt()
+def wait_end_navigation(safety_time):
+    print('wait for navigation')
+    while 1:
+        device_update_cs()
+        if not get_autopilot():
+            # for stargate warps
+            time.sleep(10)
+            device_update_cs()
+            if not get_autopilot():
+                time.sleep(10)
+                device_update_cs()
+                if not get_autopilot():
+                    return 1
+        time.sleep(safety_time)
+def main():
+    interface_show_player()
     mining_from_station()
-    return
+def custom():
+    speed_x, speed_y = 495, 460
+    add_rectangle(speed_y, speed_x, 1, 1)
+    cv.imshow('.', CS_cv)
+    cv.waitKey()
 
 
-main()
+# RECENT, TO SORT
+
+
+read_config_file()
+if start == 'main':
+    main()
+if start == 'custom':
+    custom()
 
