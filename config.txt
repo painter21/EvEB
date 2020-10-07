@@ -1,8 +1,10 @@
-start combat_from_station
+start custom
+random_warp 4
 preferredOrbit 29
 planet 0
 repeat 1
 device 0
-mining_time 60
+mining_time 120
 name kort
 home 1
+bait 0

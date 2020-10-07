@@ -26,7 +26,7 @@ if 1:
     interrupted_farming = 0
     eco_mode = 0
 
-    module_icon_radius = 30
+    module_icon_radius = 28
     color_white = [255, 255, 255, 255]
     outer_autopilot_green = [46, 101, 122, 255]
     inner_autopilot_green = [155, 166, 158, 255]
@@ -45,25 +45,6 @@ if 1:
     random_warp = 1
     time_stamp = time.time()
 
-# BLUESTACKS CONNECT
-if 1:
-    # connect to Bluestacks
-    adb = Client(host='127.0.0.1', port=5037)
-    devices = adb.devices()
-    if len(devices) < device_nr + 1:
-        print('no device attached')
-        quit()
-    # CS = current Screenshot
-    print(devices)
-    device = devices[device_nr]
-    CS = device.screencap()
-    with open('screen.png', 'wb') as f:
-        f.write(CS)
-    CS_cv = cv.imread('screen.png')
-    CS_image = Image.open('screen.png')
-    CS_image = np.array(CS_image, dtype=np.uint8)
-
-# BASIC FUNCTIONS
 def read_config_file():
     print('update config')
     file = open('config.txt')
@@ -94,11 +75,30 @@ def read_config_file():
         if tmp[0] == 'bait':
             global bait
             bait = int(tmp[1])
-            print('bait ', bait)
         if tmp[0] == 'start':
             global start
             start = tmp[1]
         tmp = file.readline()
+# BLUESTACKS CONNECT
+if 1:
+    read_config_file()
+    # connect to Bluestacks
+    adb = Client(host='127.0.0.1', port=5037)
+    devices = adb.devices()
+    if len(devices) < device_nr + 1:
+        print('no device attached')
+        quit()
+    # CS = current Screenshot
+    print(devices)
+    device = devices[device_nr]
+    CS = device.screencap()
+    with open('screen.png', 'wb') as f:
+        f.write(CS)
+    CS_cv = cv.imread('screen.png')
+    CS_image = Image.open('screen.png')
+    CS_image = np.array(CS_image, dtype=np.uint8)
+
+# BASIC FUNCTIONS
 def power_nap():
     time.sleep(np.random.default_rng().random() * 0.3 + 0.5)
 def device_update_cs():
@@ -145,7 +145,7 @@ def device_swipe_from_circle(x, y, r, d, direction):
     if direction > 0:
         angle = np.pi / 2 * direction
     else:
-        angle = np.random.default_rng().random() * np.pi
+        angle = np.random.default_rng().random() * np.pi * 1.5
     r = 130 + d * 2.4
 
     device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
@@ -198,12 +198,23 @@ def image_read_asteroid(image1):
             min_value = value
             best_match = asteroid_file
     return best_match[:-4]
+def image_get_blur_brightness(x, y):
+    brightness = 0
+    count = 0
+    for x_off in range(3):
+        x_new = x+x_off-1
+        for y_off in range(3):
+            y_new = y+y_off-1
+            for color in CS_cv[y_new][x_new]:
+                brightness += color
+                count += 1
+    return 100*brightness/count/255
 
 def add_rectangle(x, y, w, h):
     cv.rectangle(CS_cv, (x, y), (x + w, y + h),
                  color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
 def show_image(image):
-    if image is None:
+    if image == 0:
         cv.imshow('tmp', CS_cv)
     else:
         cv.imshow('tmp', image)
@@ -377,7 +388,22 @@ def get_filter_icon(filter_name):
             if max_val > 0.99:
                 return max_loc[0] + x, max_loc[1] + y
     return 0
-
+def get_is_target():
+    outer_x, outer_y, inner_x, inner_y, hp_x, hp_y = 631, 16, 671, 22, 656, 50
+    # is something targeted?
+    outer_brightness = image_get_blur_brightness(outer_x, outer_y)
+    inner_brightness = image_get_blur_brightness(inner_x, inner_y)
+    hp_brightness = image_get_blur_brightness(hp_x, hp_y)
+    if outer_brightness*9/12 > inner_brightness:
+        if hp_brightness - inner_brightness > 16:
+            return 1
+    return 0
+def get_module_is_active(module):
+    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
+    x, y = module[2] + 2, module[3] - module_icon_radius
+    if compare_colors(CS_image[y][x], activate_blue) > 15:
+        return 1
+    return 0
 def interface_show_player():
     x, y, h, w = 66, 1, 87, 127
     crop_img = CS_cv[y:y + h, x:x + w]
@@ -672,19 +698,24 @@ def in_belt():
     # check if mining equipment is busy/ easily activated
     # if not, deactivate eco_state and start mining
     miners_active = 1
+    stop = 0
     for module in ModuleList:
-        if module[1] == 'harvest':
-            if activate_module(module):
+        if module[1] == 'harvest' and stop == 0:
+            if get_module_is_active(module):
+                activate_module(module)
                 if eco_mode:
                     time.sleep(10)
                 else:
                     time.sleep(3)
                 device_update_cs()
-                if activate_module(module):
+                if get_module_is_active(module):
                     miners_active = 0
-                    break
-                    # todo that break needs testing
+                    stop = 1
     if not miners_active:
+        if get_is_target():
+            time.sleep(20)
+            device_swipe_from_circle(435, 265, 250, 1, 0)
+            return in_belt()
         if eco_mode:
             device_toggle_eco_mode()
         time.sleep(3)
@@ -693,23 +724,14 @@ def in_belt():
         time.sleep(15)
         return in_belt()
     else:
-        # set state to stable
+        # set state to stable, autopilot
         if not eco_mode:
+            if not get_autopilot():
+                print('setting path home')
+                time.sleep(2)
+                set_home()
             device_toggle_eco_mode()
             return in_belt()
-
-    # check if autopilot is available
-    if not get_autopilot():
-        print('setting path home')
-        if eco_mode:
-            device_toggle_eco_mode()
-            time.sleep(2)
-            # set home
-        set_home()
-        if eco_mode:
-            device_toggle_eco_mode()
-            time.sleep(3)
-
 
     print('small handling', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)))
     for i in range(25):
@@ -746,16 +768,15 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    speed_x, speed_y = 495, 460
-    add_rectangle(speed_y, speed_x, 1, 1)
-    cv.imshow('.', CS_cv)
-    cv.waitKey()
-
+    update_modules()
+    global time_stamp
+    time_stamp = time.time() + mining_time
+    in_belt()
+    # main()
 
 # RECENT, TO SORT
 
 
-read_config_file()
 if start == 'main':
     main()
 if start == 'custom':
