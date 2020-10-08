@@ -201,7 +201,6 @@ def mining_in_belt():
             mining_in_belt()
             return
         if get_eco_mode():
-            print(0)
             device_toggle_eco_mode()
         wait_and_watch_out(4)
         print('searching for asteroid')
@@ -216,7 +215,6 @@ def mining_in_belt():
                 print('setting path home')
                 time.sleep(2)
                 set_home()
-            print(1)
             device_toggle_eco_mode()
             mining_in_belt()
             return

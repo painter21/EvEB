@@ -333,9 +333,10 @@ def danger_handling_farming():
 # STATES
 def combat_start_from_station():
     undock_and_modules()
-    set_pi_planet_for_autopilot()
+    set_pi_planet_for_autopilot(get_planet())
     activate_autopilot()
-    wait_end_navigation()
+    wait_end_navigation(10)
+    playsound(Path_to_script + 'assets\\sounds\\bell.wav')
     warp_to_ano()
     combat()
 def combat_start_from_system():
@@ -464,7 +465,9 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    print('hi')
+    # set_pi_planet_for_autopilot(get_planet())
+    main()
+    return
 
 read_config_file()
 read_config_file_uni()

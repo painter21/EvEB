@@ -3,9 +3,9 @@ jaspet
 hedbergite
 bitot
 arkonor
+dark_ochre
 pyroxeres
 spoudmain
 hermorphite
-dark_ochre
 gneiss
 mercoxit

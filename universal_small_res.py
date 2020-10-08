@@ -19,6 +19,12 @@ def read_config_file_uni():
     tmp = file.readline()
     while tmp != '':
         tmp = str(tmp).split()
+        if tmp[0] == 'ship':
+            global ship
+            ship = tmp[1]
+            if ship == 'cruiser':
+                global module_icon_radius
+                module_icon_radius = 23
         if tmp[0] == 'planet':
             global planet
             planet = int(tmp[1])
@@ -69,6 +75,7 @@ if 1:
     path = ''
     path_to_script = ''
     start = 'main'
+    ship = 'frigate'
     preferredOrbit = 29
     planet = 0
     repeat = 0
@@ -331,12 +338,12 @@ def repair(desired_hp):
     # todo not tested
     hp = get_hp()
     for module in ModuleList:
-        if module[0] == 'ar_regen':
+        if module[0] == 'rep':
             if hp[1] < desired_hp:
                 activate_module(module)
             else:
                 deactivate_module(module)
-        if module[1] == 'sh_regen':
+        if module[1] == 'boost':
             if hp[0] < desired_hp:
                 activate_module(module)
             else:
@@ -345,14 +352,14 @@ def update_modules():
     global ModuleList
     ModuleList = []
     print('path ')
-    print(path_to_script + 'assets\\modules\\small\\_pos.txt')
-    file = open(path_to_script + 'assets\\modules\\small\\_pos.txt')
+    print(path_to_script + 'assets\\modules\\' + ship + '\\_pos.txt')
+    file = open(path_to_script + 'assets\\modules\\' + ship + '\\_pos.txt')
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
-        ar = cv.imread(path_to_script + 'assets\\modules\\small\\' + tmp[0] + '.png')
+        ar = cv.imread(path_to_script + 'assets\\modules\\' + ship + '\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
-        threshold = 0.95
+        threshold = 0.98
         loc = np.where(result >= threshold)
         accepted_list = []
         for pt in zip(*loc[::-1]):
@@ -422,12 +429,12 @@ def get_autopilot_active():
     return 0
 def get_is_capsule():
     tmp_module_list = []
-    file = open(path_to_script + 'assets\\modules\\small\\_pos.txt')
+    file = open(path_to_script + 'assets\\modules\\' + ship + '\\_pos.txt')
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
         print(tmp)
-        ar = cv.imread(path_to_script + 'assets\\modules\\small\\' + tmp[0] + '.png')
+        ar = cv.imread(path_to_script + 'assets\\modules\\' + ship + '\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         threshold = 0.95
         loc = np.where(result >= threshold)
@@ -634,20 +641,21 @@ def set_home():
 def set_pi_planet_for_autopilot(target):
     # only works for pI location
     # click portrait
-    device_click_circle(140, 45, 30)
+    device_click_rectangle(50, 4, 60, 40)
     time.sleep(0.5)
     # planetary production
-    device_click_rectangle(803, 562, 135, 135)
+    device_click_rectangle(481, 332, 82, 84)
     time.sleep(1)
     # click planet
-    off = 145
-    device_click_rectangle(32, 205 + target * off, 211, 64)
+    off = 86
+    device_click_rectangle(25, 123 + target * off, 115, 36)
     # click set des
-    device_click_rectangle(1321, 767, 253, 81)
+    device_click_rectangle(791, 460, 154, 49)
     # click on close
     device_click_circle(925, 30, 15)
-    time.sleep(1)
-    device_click_circle(925, 30, 15)
+    # time.sleep(1)
+    # device_click_circle(925, 30, 15)
+    time.sleep(5)
 
 # TASKS
 def wait_end_navigation(safety_time):
