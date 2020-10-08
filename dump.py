@@ -1,187 +1,92 @@
-# only works on 16000x900
+def compare_image(image1, image2):
+    # image2 muss kleiner oder im idealfall gleich groß wie image1 sein
+    diff = 0
+    count = 0
+    row_count = -1
+    for row in image1:
+        row_count += 1
+        pixel_count = -1
+        for pixel in row:
+            pixel_count += 1
+            color_count = -1
+            for color in pixel:
+                color_count += 1
+                diff += abs(int(color) - int(image2[row_count][pixel_count][color_count]))
+                count += 1
+    return int(diff * 10000 / 255 / count)
+def mine_something(maximum):
+    for i in range(maximum + 1):
+        rng = random.random()
+        if rng < i / maximum:
+            time.sleep(0.5)
+            device_click_rectangle(742, 47 + 51 * (i - 1), 158, 44)
+            time.sleep(0.5)
+            device_click_rectangle(546, 101 + 51 * (i - 1), 158, 44)
+            time.sleep(1)
+            device_click_rectangle(742, 47 + 51 * (i - 1), 158, 44)
+            device_click_rectangle(543, 45 + 51 * (i - 1), 174, 49)
+            for module in ModuleList:
+                if module[1] == 'prop':
+                    activate_module(module)
+            time.sleep(25)
+            for module in ModuleList:
+                if module[1] == 'harvest':
+                    activate_module(module)
+            break
+    time.sleep(1)
 
-from ppadb.client import Client
-import time
-import numpy as np
-import cv2 as cv
-import pytesseract as tess
-from numpy import random
-from PIL import Image
-from playsound import playsound
-import os
-import re
 
-tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
-
-
-# INIT
-# updated by functions
-health_st = 100
-health_ar = 100
-health_sh = 100
-ModuleList = []
-start_farm_time = time.time()
-last_farm_site = 0
-last_inventory_value = 0
-interrupted_farming = 0
-
-module_icon_radius = 40
-color_white = [255, 255, 255, 255]
-# to be changed by user / fixed
-task = 'combat'
-start = 'from_station'
-preferredOrbit = 29
-planet = 0
-repeat = 0
-device = 0
-
-def read_config_file():
-    print('update config')
-    file = open('config.txt')
-    tmp = file.readline()
+# TODO'
+# todo
+def get_good_asteroid_from_list(ast_list):
+    file = open('assets\\ore_pref.txt')
+    tmp = file.readline().strip()
     while tmp != '':
-        tmp = str(tmp).split()
-        if tmp[0] == 'planet':
-            global planet
-            planet = int(tmp[1])
-        if tmp[0] == 'repeat':
-            global repeat
-            repeat = int(tmp[1])
-        if tmp[0] == 'device':
-            global device_nr
-            device_nr = int(tmp[1])
-        if tmp[0] == 'start':
-            global start
-            start = tmp[1]
-        tmp = file.readline()
-read_config_file()
+        for ast in ast_list:
+            if ast[0] == tmp:
+                return ast
+        tmp = file.readline().strip()
 
+    # swipe down
+    device_click_rectangle(740, 46, 161, 269)
+    device_swipe_from_circle(822, 493, 20, 400, 3)
+    ast_list = get_list_asteroid()
 
-# connect to Bluestacks
-adb = Client(host='127.0.0.1', port=5037)
-devices = adb.devices()
-print(devices)
-if len(devices) < device:
-    print('not enough devices attached')
+    file = open('assets\\ore_pref.txt')
+    tmp = file.readline().strip()
+    while tmp != '':
+        for ast2 in ast_list:
+            if ast2[0] == tmp:
+                return ast2
+        tmp = file.readline().strip()
+
+    mining_warp_to_random(-1)
+    mining_in_belt()
     quit()
-# CS = current Screenshot
-print(devices)
-device = devices[device]
-CS = device.screencap()
-with open('screen.png', 'wb') as f:
-    f.write(CS)
-CS_cv = cv.imread('screen.png')
-CS_image = Image.open('screen.png')
-CS_image = np.array(CS_image, dtype=np.uint8)
-
-# BASIC FUNCTIONS
-def power_nap():
-    time.sleep(np.random.default_rng().random() * 0.3 + 0.3)
-def update_cs():
-    global CS_cv, CS, CS_image
-    CS = device.screencap()
-    with open('screen.png', 'wb') as g:
-        g.write(CS)
-    CS_cv = cv.imread('screen.png')
-    CS_image = Image.open('screen.png')
-    CS_image = np.array(CS_image, dtype=np.uint8)
-def compare_colors(a, b):
-    fir = abs(int(a[0]) - int(b[0]))
-    sec = abs(int(a[1]) - int(b[1]))
-    thi = abs(int(a[2]) - int(b[2]))
-    fou = abs(int(a[3]) - int(b[3]))
-    return (fir + sec + thi + fou) / 10
-def get_point_in_circle(x, y, r):
-    a = 3.  # shape
-    angle = np.random.default_rng().random() * np.pi
-    r = r - np.random.default_rng().power(a) * r
-    return np.cos(angle) * r + x, np.sin(angle) * r + y
-def click_circle(x, y, r):
-    tmp = get_point_in_circle(x, y, r)
-    device.shell(f'input touchscreen tap {tmp[0]} {tmp[1]}')
-    power_nap()
-
-    # great display:
-    # https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.power.html#numpy.random.Generator.power
-def click_rectangle(x, y, w, h):
-    x = w * np.random.default_rng().random() + x
-    y = h * np.random.default_rng().random() + y
-    device.shell(f'input touchscreen tap {x} {y}')
-    power_nap()
-def swipe_from_circle(x, y, r, d, direction):
-    tmp = get_point_in_circle(x, y, r)
-    x, y = tmp[0], tmp[1]
-    if d == 0:
-        device.shell(f'input touchscreen tap {x} {y}')
-        return
-
-    # random direction: 0- random, 1 is down, 2 is ?, 3 is up, 4 is up
-
-    if direction > 0:
-        angle = np.pi / 2 * direction
-    else:
-        angle = np.random.default_rng().random() * np.pi
-    r = 130 + d * 2.4
-
-    device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
-    power_nap()
-
-
-# INTERNAL HELPER FUNCTIONS
-def calibrate():
-    file = open('modules\_pos.txt')
-    tmp = file.readline()
-    while tmp != '':
-        tmp = tmp.split()
-        ar = cv.imread('modules\\' + tmp[0] + '.png')
-        result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
-        threshold = 0.99
-        loc = np.where(result >= threshold)
-        previous_point_y, previous_point_x = 0, 0
-        accepted_list = []
-        for pt in zip(*loc[::-1]):
-            continue_value = 1
-            for point in accepted_list:
-                if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
-                    continue_value = 0
-            if continue_value == 1:
-                accepted_list.append(pt)
-                center = (pt[0] + int(tmp[2]), pt[1] + int(tmp[3]))
-                ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
-                cv.circle(CS_cv, center, 40, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
-        tmp = file.readline()
-    # cv.imshow('tmp', CS_cv)
-    # cv.waitKey()
-    print(str(len(ModuleList)) + ' Modules found')
-def get_speed():
-    tmp = 0
-    stop = 0
-    precision = 10
-    factor_y = 0.67
-    center_x = 800
-    center_y = 779
-    r = 82
-    while tmp < precision and not stop:
-        angle = np.pi * (0.65 - 0.32 * tmp / precision)
-        x = int(center_x + np.cos(angle) * r)
-        y = int(center_y + np.sin(angle) * r * factor_y)
-        # cv.rectangle(CS_cv, (x, y), (x, y), color=(tmp*10, 255, 0), thickness=int((22-tmp)/2), lineType=cv.LINE_4)
-        if CS_image[y][x][0] > 175:
-            return int(tmp / precision * 100)
-        tmp += 1
-    # cv.imshow('image', CS_cv)
-    # cv.waitKey(0)
-    return 100
-def get_player_thread():
-    swap_filter('PvE')
-    x, y, w, h = 1547, 86, 18, 445
-    as_icon = cv.imread('assets\\all_ships_icon.png')
-    crop_img = CS_cv[y:y + h, x:x + w]
-    result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
-    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    if max_val > 0.999:
-        return 1
-    return 0
+def choose_anomaly():
+    # todo
+    ano_list = get_list_anomaly()
+    if len(ano_list) == 0:
+        print('system empty')
+        search_new_system()
+        quit()
+    for ano in ano_list:
+        if ano[0] == 'scout':
+            playsound('assets\\sounds\\bell.wav')
+            return ano
+    for ano in ano_list:
+        if ano[1] == 4:
+            return ano
+    for ano in ano_list:
+        if ano[1] == 5:
+            return ano
+    for ano in ano_list:
+        if ano[1] == 6 and ano[0] == 'medium':
+            return ano
+    for ano in ano_list:
+        if ano[1] == 6 and ano[0] == 'small':
+            return ano
+    return ano_list[0]
 def get_list_anomaly():
     swap_filter('Ano')
     # todo: ignore closest ano
@@ -268,38 +173,7 @@ def get_list_anomaly():
     for ano in list_ano:
         print(ano)
     return list_ano
-def search_new_system():
-    print('todo search_new_system()')
-    quit()
-def choose_anomaly():
-    # todo
-    ano_list = get_list_anomaly()
-    if len(ano_list) == 0:
-        print('system empty')
-        search_new_system()
-        quit()
-    for ano in ano_list:
-        if ano[0] == 'scout':
-            playsound('assets\\sounds\\bell.wav')
-            return ano
-    for ano in ano_list:
-        if ano[1] == 4:
-            return ano
-    for ano in ano_list:
-        if ano[1] == 5:
-            return ano
-    for ano in ano_list:
-        if ano[1] == 6 and ano[0] == 'medium':
-            return ano
-    for ano in ano_list:
-        if ano[1] == 6 and ano[0] == 'small':
-            return ano
-    return ano_list[0]
-def wait_warp():
-    # does nothing until speed bar goes to 15%
-    update_cs()
-    if get_speed() > 15:
-        wait_warp()
+
 def update_hp_helper(r, off, offset):
     tmp = 0
     precision = 20
@@ -412,25 +286,6 @@ def warp_to_ano():
     wait_warp()
 
     # swap to PvE
-def get_cargo():
-    steps = 20
-    x, y, w = 6, 105, int(145 / steps)
-    # 0.55 match, 0.69 no match
-    old_color = CS_image[y][x]
-    for i in range(steps):
-        new_color = CS_image[y][x + (i * w)]
-        # cv.rectangle(CS_cv, (x + (i * w), y), (x + (i * w), y), color=(0, 255, i * 10), thickness=3, lineType=cv.LINE_4)
-        # print(compare_colors(new_color, old_color), new_color)
-        if compare_colors(new_color, old_color) > 9:
-            return 100 * i / steps
-        old_color = new_color
-    # cv.imshow('image', CS_cv)
-    # cv.waitKey(0)
-    # no contrast in there, have to work with colors:
-    cargo_yellow = [100, 100, 72, 255]
-    if compare_colors(CS_image[y][x + (i * w)], cargo_yellow) < 9:
-        return 100
-    return 0
 def get_capacitor():
     r_ca = - 80
     tmp = 1
@@ -522,36 +377,8 @@ def get_inventory_value():
     click_circle(1543, 51, 10)
     print('current inventory value: ', int(raw_text))
     return int(raw_text)
-def get_inventory_value_small_screen(is_open):
-    x, y, w, h = 327, 492, 180, 26
-    if is_open:
-        # open inventory
-        click_rectangle(5, 61, 83, 26)
-        time.sleep(1.5)
-        update_cs()
-    crop_img = CS_cv[y:y + h, x:x + w]
-    cv.imshow('.', crop_img)
-    cv.waitKey()
-    raw_text = tess.image_to_string(crop_img).strip()
-    raw_text = re.sub('\D', '', raw_text)
-    if is_open:
-        # click on close
-        click_circle(926, 30, 10)
-    print('current inventory value: ', int(raw_text))
-    return int(raw_text)
-def get_autopilot():
-    x_a, y_a, x_b, y_b, x_c, y_c = 71, 171, 71, 207, 37, 189
-    autopilot_green = [66, 138, 122, 255]
-    # check if autopilot is online (2 pixels because safety)
-    if compare_colors(CS_image[y_a][x_a], autopilot_green) < 10 and \
-            compare_colors(CS_image[y_b][x_b], autopilot_green) < 10:
-        # check if autopilot is running (should i just turn it on? nah)
-        if compare_colors(CS_image[y_c][x_c], autopilot_green) > 13:
-            return 1
-    return 0
 
 
-# INTERFACE HELPER FUNCTIONS
 def press_lock_button():
     x, y, w, h = 982, 555, 35, 35
     as_icon = cv.imread('assets\\target_button.png')
@@ -590,37 +417,6 @@ def swap_filter(string_in_name):
         swap_filter(string_in_name)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
-def activate_module(module):
-    if module[1] == 'drone':
-        x_off, y_off, w, h = -46, -43, 31, 30
-        x, y = module[2] + x_off, module[3] + y_off
-        img_target = cv.imread('assets\\drone_target.png')
-        crop_img = CS_cv[y:y + h, x:x + w]
-        result = cv.matchTemplate(crop_img, img_target, cv.TM_CCORR_NORMED)
-        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-        print('trying to activate drone')
-        if max_val < 0.95:
-            print('activating drone')
-            if random.random() > 0.5:
-                print(0)
-                engage_enemy(0)
-                return 1
-            print(1)
-            click_circle(module[2], module[3], module_icon_radius)
-        return 1
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
-    x, y = module[2] + 2, module[3] - 40
-
-    if compare_colors(CS_image[y][x], activate_blue) > 15 and compare_colors(CS_image[y][x], activate_red) > 15:
-        click_circle(module[2], module[3], module_icon_radius)
-        return 1
-    return 0
-def deactivate_module(module):
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
-    x, y = module[2] + 2, module[3] - 40
-
-    if compare_colors(CS_image[y][x], activate_blue) < 15:
-        click_circle(module[2], module[3], module_icon_radius)
 def repair(desired_hp):
     # todo not tested
     update_hp()
@@ -678,8 +474,6 @@ def check_if_in_station():
     print('todo station check')
     return 1
 
-
-# PLAIN SCRIPTS
 def set_and_start_autopilot(target):
     # only works for pI location
     # click portrait
@@ -729,7 +523,6 @@ def dump_cargo():
     return 1
 
 
-# STATES
 def go_home():
     # open inventory
     click_rectangle(7, 101, 141, 46)
@@ -942,7 +735,6 @@ def solve_scouts():
     print('todo: solve_scouts')
     quit()
 
-
 # STARTS
 def from_station():
     show_player_for_confirmation()
@@ -965,14 +757,7 @@ def from_system():
     print('test')
     warp_to_ano()
     combat()
-def main():
-    return
 def custom():
-    get_inventory_value_small_screen()
-    return
-
-if start == 'main':
-    main()
-if start == 'custom':
-    custom()
-
+    # wait_end_navigation(6)
+    calibrate()
+    loot()
