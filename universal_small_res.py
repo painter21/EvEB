@@ -542,6 +542,14 @@ def set_filter(string_in_name):
 
 
 # INTERFACE HELPER FUNCTIONS
+def target_action(target_nbr, action_nbr):
+    target_nbr -= 1
+    action_nbr -= 1
+    tar_x, tar_y, tar_off_x = 670, 38, -61
+    dd_x, dd_y, dd_off_y = 525, 80, 75
+    device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
+    device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
+    return
 def wait_warp_and_set_home():
     if not get_autopilot():
         set_home()

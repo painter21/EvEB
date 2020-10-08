@@ -84,6 +84,50 @@ def choose_anomaly():
     return ano[0]
 
 # TASKS
+def get_npc_count():
+    # todo: test for 10+ enemys
+    set_filter('PvE')
+    x, y, w, h = 1547, 86, 18, 445
+    as_icon = cv.imread('assets\\enemy_npc.png')
+    crop_img = CS_cv[y:y + h, x:x + w]
+    result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
+    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+    if max_val > 0.95:
+        y = max_loc[1] + y
+        x = max_loc[0] + 10 + x
+        h, w = 35, 25
+        crop_img = CS_cv[y:y + h, x:x + w]
+        blank_img = np.zeros((h, w * 2, 3), np.uint8)
+        line = 0
+        while line < h - 2:
+            row = 0
+            while row < w - 2:
+                brightness = 0
+                for color in crop_img[line][row]:
+                    brightness += color
+                    if brightness > 300:
+                        blank_img[line][row] = crop_img[line][row]
+                        blank_img[line][row + w - 10] = crop_img[line][row]
+                row += 1
+            line += 1
+        raw_text = tess.image_to_string(blank_img).strip()
+        raw_text = re.sub('\D', '', raw_text)
+        tmp = 0
+        if int(len(raw_text)) == 0:
+            return 2
+        while tmp < int(len(raw_text) / 2):
+            raw_text = raw_text[:-1]
+            tmp += 1
+        return int(raw_text)
+    return 0
+def flee(maximus_dist):
+    set_filter('esc')
+    warp_randomly(maximus_dist, 1)
+    for module in ModuleList:
+        if module[1] == 'esc':
+            activate_module(module)
+        if module[1] == 'prop':
+            deactivate_module(module)
 def get_list_anomaly():
     set_filter('Ano')
     # todo: so much todo
@@ -243,6 +287,47 @@ def warp_to_ano():
     wait_warp()
 
     # swap to PvE
+def update_and_checkup_for_combat():
+    device_update_cs()
+    set_filter('PvE')
+
+    # check hp
+    repair(85)
+
+    # players, hull dmg?
+    return danger_handling_combat()
+def danger_handling_combat():
+    if get_hp()[2] < 90:
+        print('hull critical')
+        combat_return(0)
+        quit()
+    if get_cap() < 10:
+        print('capacitor critical')
+        for i in range(3):
+            flee(1)
+        wait_for_cap()
+        warp_to_ano()
+        combat()
+        return 1
+    if get_filter_icon('all_ships.png'):
+        print('player detected')
+        for i in range(3):
+            combat_return(1)
+        wait_warp()
+        warp_to_ano()
+        combat()
+        return 1
+    return 0
+def danger_handling_farming():
+    if get_filter_icon('all_ships.png'):
+        print('player detected')
+        for i in range(3):
+            flee(4)
+        wait_warp()
+        warp_to_ano()
+        combat()
+        return 1
+    return 0
 
 
 # STATES
@@ -259,6 +344,7 @@ def combat_start_from_system():
     combat()
 
 def combat_from_system():
+    return
 def loot():
     print('looting')
     # swap to container view
@@ -280,11 +366,11 @@ def loot():
     result = cv.matchTemplate(crop_img, wreck_icon, cv.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
     if max_val > 0.95:
-        click_circle(max_loc[0] + x + 5, max_loc[1] + y + 7, 15)
+        device_click_circle(max_loc[0] + x + 5, max_loc[1] + y + 7, 15)
         while 1:
 
             # behavior
-            update_cs()
+            device_update_cs()
             repair(100)
             danger_handling_farming()
             if get_npc_count():
@@ -293,7 +379,7 @@ def loot():
 
             if get_cargo() > 95:
                 print('cargo full')
-                go_home()
+                combat_return(0)
                 return
 
             # still containers left?
@@ -316,29 +402,29 @@ def combat():
     tmp_situational = time.time()
     last_npc_count = 0
 
-    orbit_enemy(0)
     # maybe i shouldnt directly engage a potential enemy? it saves me like 6 secs every
     # fight but seems akward, orbit is okay
-    engage_enemy(0)
+    target_action(1, 4)
 
     while 1:
         print('combat cycle')
         if update_and_checkup_for_combat() == 1:
             return
-        troubleshoot_filter_window()
+        activate_filter_window()
         current_npc_count = get_npc_count()
         print(0)
         # update targets
         # todo: lock closer targets
         if time.time() - tmp_lock > 0:
-            if press_lock_button():
+            if 1:
+                # press_lock_button():
                 tmp_lock = time.time() + 7
                 tmp_weapon = time.time() + 10
 
         # no enemies
         if not current_npc_count:
             time.sleep(2)
-            update_cs()
+            device_update_cs()
             if not current_npc_count:
                 loot()
                 return
@@ -352,15 +438,12 @@ def combat():
                     # or weapon
                     if activate_module(module):
                         print('activating drone successful')
-                        # this orbit call should not be necessary, but sometimes it somehow misses orbit
-                        orbit_enemy(0)
                         tmp_weapon = time.time() + 10
 
         print(3)
         # activate standard modules, behavior
         if current_npc_count != last_npc_count:
-            orbit_enemy(0)
-            engage_enemy(0)
+            target_action(1, 4)
             last_npc_count = current_npc_count
             # todo react to close enemys, nos, web, etc
         for module in ModuleList:
@@ -374,6 +457,7 @@ def combat():
                 if module[1] == 'situational':
                     activate_module(module)
 def combat_return(get_ganked):
+    return
 
 # STARTS
 def main():

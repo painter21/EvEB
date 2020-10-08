@@ -1007,6 +1007,7 @@ def from_system():
 def main():
     return
 def custom():
+    update_cs()
     print('done')
 
 
