@@ -226,11 +226,11 @@ def show_image(image):
 def update_modules():
     global ModuleList
     ModuleList = []
-    file = open('modules\small\_pos.txt')
+    file = open('assets\\modules\\small\\_pos.txt')
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
-        ar = cv.imread('modules\\small\\' + tmp[0] + '.png')
+        ar = cv.imread('assets\\modules\\small\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         threshold = 0.95
         loc = np.where(result >= threshold)
@@ -302,12 +302,12 @@ def get_autopilot_active():
     return 0
 def get_is_capsule():
     tmp_module_list = []
-    file = open('modules\small\_pos.txt')
+    file = open('assets\\modules\\small\\_pos.txt')
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
         print(tmp)
-        ar = cv.imread('modules\\small\\' + tmp[0] + '.png')
+        ar = cv.imread('assets\\modules\\small\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         threshold = 0.95
         loc = np.where(result >= threshold)
@@ -373,7 +373,7 @@ def get_list_asteroid():
     # cv.waitKey()
     return list_ast
 def get_good_asteroid_from_list(ast_list):
-    file = open('ore_pref.txt')
+    file = open('assets\\ore_pref.txt')
     tmp = file.readline().strip()
     while tmp != '':
         for ast in ast_list:
@@ -386,7 +386,7 @@ def get_good_asteroid_from_list(ast_list):
     device_swipe_from_circle(822, 493, 20, 400, 3)
     ast_list = get_list_asteroid()
 
-    file = open('ore_pref.txt')
+    file = open('assets\\ore_pref.txt')
     tmp = file.readline().strip()
     while tmp != '':
         for ast2 in ast_list:
@@ -631,7 +631,7 @@ def mining_from_station():
     # wait_end_navigation(20)
 
     # clear popup
-    if get_is_in_station():
+    if not get_is_in_station():
         device_click_circle(818, 87, 10)
         time.sleep(2)
 
@@ -764,6 +764,7 @@ def mining_return(got_ganked):
         print('arriving')
         # dump ressources
         dump_cargo()
+        farm_tracker()
         # repeat?
     if repeat == 0:
         playsound('assets\\sounds\\bell.wav')
