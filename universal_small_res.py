@@ -51,10 +51,7 @@ def read_config_file_uni():
 # INIT GLOBAL VALUES
 if 1:
     # updated by functions
-    health_st_list, health_ar_list, health_sh_list = [], [], []
-    health_st = 100
-    health_ar = 100
-    health_sh = 100
+    health_st_list, health_ar_list, health_sh_list, cap_list = [], [], [], []
     ModuleList = []
     start_farm_time = time.time()
     last_farm_site = 0
@@ -125,10 +122,75 @@ def set_path_to_script(pa):
     path_to_script = pa
 
 # BASIC FUNCTIONS
-def config_uni_helper():
-    
+def calc_hp_pos():
+    r_st = 39
+    r_ar = 49
+    r_sh = 57
+    r_cap = -57
+    calc_hp_pos_helper(r_st, 1/10, -1, 0, 0)
+    calc_hp_pos_helper(r_ar, 1/6, 0, 0, 1)
+    calc_hp_pos_helper(r_sh, 1/6, 0, 0, 2)
+    calc_hp_pos_helper(r_cap, 1/8, 0, -0.041, 3)
+    # cv.imshow('image', CS_cv)
+    # cv.waitKey(0)
+def calc_hp_pos_helper(r, off, offset, rad_off, nbr):
+    global health_st_list, health_ar_list, health_sh_list
+    tmp = 0
+    precision = 20
+    factor_y = 0.67
+    center_x = 479
+    center_y = 466
+    while tmp < precision:
+        angle = np.pi * (1.32 + rad_off - 0.63 * tmp / precision)
+        x = int(center_x + np.cos(angle) * r)
+        y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) * off + offset)
+        if nbr == 0:
+            health_st_list.append([x, y])
+        if nbr == 1:
+            health_ar_list.append([x, y])
+        if nbr == 2:
+            health_sh_list.append([x, y])
+        if nbr == 3:
+            cap_list.append([x, y])
+        # cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp * 10), thickness=1, lineType=cv.LINE_4)
+        # if CS_image[y][x][2] > 90:
+        #    return int(100 - tmp / precision * 100)
+        tmp += 1
+    return 0
+def get_hp():
+    health_str, health_arm, health_shi = 0, 0, 0
+    length_lists = len(health_st_list)
+    for i in range(length_lists):
+        pos = health_st_list[i]
+        print(CS_image[pos[1]][pos[0]][2])
+        if CS_image[pos[1]][pos[0]][2] > 90:
+            health_str = int(100-i*100/length_lists)
+            break
+    print('-----------')
+    for i in range(length_lists):
+        pos = health_ar_list[i]
+        print(CS_image[pos[1]][pos[0]][2])
+        if CS_image[pos[1]][pos[0]][2] > 90:
+            health_arm = int(100-i*100/length_lists)
+            break
+    print('-----------')
+    for i in range(length_lists):
+        pos = health_sh_list[i]
+        print(CS_image[pos[1]][pos[0]][2])
+        if CS_image[pos[1]][pos[0]][2] > 90:
+            health_shi = int(100-i*100/length_lists)
+            break
+    return health_shi, health_arm, health_str
+def get_cap():
+    length_list = len(cap_list)
+    for i in range(length_list):
+        pos = cap_list[i]
+        if CS_image[pos[1]][pos[0]][0] < 200:
+            return i * 100 / length_list
+    return 100
 def config_uni():
     read_config_file_uni()
+    calc_hp_pos()
     global CS_cv, CS_image, Device
     # connect to Bluestacks
     if len(Devices) < device_nr + 1:
@@ -200,7 +262,8 @@ def device_toggle_eco_mode():
     global eco_mode
     eco_mode = 1 - eco_mode
     subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
-
+def device_click_filter_block():
+    device_click_rectangle(740, 46, 161, 269)
 def image_remove_dark(image, border):
     # remove darker pixels
     row_count = -1
@@ -256,7 +319,7 @@ def add_rectangle(x, y, w, h):
     cv.rectangle(CS_cv, (x, y), (x + w, y + h),
                  color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
 def show_image(image):
-    if image == 0:
+    if image.all() == 0:
         cv.imshow('tmp', CS_cv)
     else:
         cv.imshow('tmp', image)
@@ -264,6 +327,20 @@ def show_image(image):
 
 
 # INTERNAL HELPER FUNCTIONS
+def repair(desired_hp):
+    # todo not tested
+    hp = get_hp()
+    for module in ModuleList:
+        if module[0] == 'ar_regen':
+            if hp[1] < desired_hp:
+                activate_module(module)
+            else:
+                deactivate_module(module)
+        if module[1] == 'sh_regen':
+            if hp[0] < desired_hp:
+                activate_module(module)
+            else:
+                deactivate_module(module)
 def update_modules():
     global ModuleList
     ModuleList = []
@@ -416,8 +493,8 @@ def get_inventory_value_small_screen(is_open):
         time.sleep(1.5)
         device_update_cs()
     crop_img = CS_cv[y:y + h, x:x + w]
-    cv.imshow('.', crop_img)
-    cv.waitKey()
+    # cv.imshow('.', crop_img)
+    # cv.waitKey()
     raw_text = tess.image_to_string(crop_img).strip()
     raw_text = re.sub('\D', '', raw_text)
     if is_open:

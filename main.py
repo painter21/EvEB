@@ -48,8 +48,8 @@ def read_config_file():
             global repeat
             repeat = int(tmp[1])
         if tmp[0] == 'device':
-            global device_nr
-            device_nr = int(tmp[1])
+            global device
+            device = int(tmp[1])
         if tmp[0] == 'start':
             global start
             start = tmp[1]
@@ -942,6 +942,45 @@ def solve_scouts():
     print('todo: solve_scouts')
     quit()
 
+health_st_list, health_ar_list, health_sh_list, cap_list = [], [], [], []
+
+def calc_hp_pos():
+    r_st = 39
+    r_ar = 49
+    r_sh = 57
+    r_cap = -57
+    calc_hp_pos_helper(r_st, 1/10, -1, 0, 0)
+    calc_hp_pos_helper(r_ar, 1/6, 0, 0, 1)
+    calc_hp_pos_helper(r_sh, 1/6, 0, 0, 2)
+    calc_hp_pos_helper(r_cap, 1/8, 0, -0.041, 3)
+    cv.imshow('image', CS_cv)
+    cv.waitKey(0)
+def calc_hp_pos_helper(r, off, offset, rad_off, nbr):
+    global health_st_list, health_ar_list, health_sh_list
+    tmp = 0
+    precision = 20
+    factor_y = 0.67
+    center_x = 479
+    center_y = 466
+    while tmp < precision:
+        angle = np.pi * (1.32 + rad_off - 0.63 * tmp / precision)
+        x = int(center_x + np.cos(angle) * r)
+        y = int(center_y + np.sin(angle) * r * factor_y - abs(10 - abs(tmp - precision / 2)) * off + offset)
+        if nbr == 0:
+            health_st_list.append([x, y])
+        if nbr == 1:
+            health_ar_list.append([x, y])
+        if nbr == 2:
+            health_sh_list.append([x, y])
+        if nbr == 3:
+            cap_list.append([x, y])
+        cv.rectangle(CS_cv, (x, y), (x, y), color=(0, 255, tmp * 10), thickness=1, lineType=cv.LINE_4)
+        # if CS_image[y][x][2] > 90:
+        #    return int(100 - tmp / precision * 100)
+        tmp += 1
+    return 0
+def get_new_hp():
+    print(len(health_st_list))
 
 # STARTS
 def from_station():
@@ -968,8 +1007,8 @@ def from_system():
 def main():
     return
 def custom():
-    get_inventory_value_small_screen()
-    return
+    print('done')
+
 
 if start == 'main':
     main()

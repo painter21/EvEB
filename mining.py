@@ -29,7 +29,7 @@ def image_read_asteroid(image1):
 def get_list_asteroid():
     # swap_filter('ining')
     # click filter element to expand filter
-    device_click_rectangle(740, 46, 161, 269)
+    device_click_filter_block()
     list_ast = []
 
     device_update_cs()
@@ -85,7 +85,9 @@ def get_good_asteroid_from_list(ast_list):
             if ast2[0] == tmp:
                 return ast2
         tmp = file.readline().strip()
-
+    if get_cargo() > 90:
+        mining_return(0)
+        quit()
     mining_warp_to_random(-1)
     mining_in_belt()
     quit()
@@ -140,15 +142,16 @@ def wait_and_watch_out(sec):
             mining_return(1)
             quit()
         time.sleep(2)
-def farm_tracker():
+def farm_tracker(got_ganked):
     # intended to be called when dumping cargo
     # t5med = 653k with frig in end
     global time_stamp_farming
-    count = time.time()-time_stamp_farming
-    string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + str(int(count/60)) + 'm ' + str(count - int(count/60)*60) + 's\n\n'
-    absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
-    absolutely_professional_database.write(string)
-    absolutely_professional_database.close()
+    if not got_ganked:
+        count = time.time()-time_stamp_farming
+        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + str(int(count/60)) + 'm ' + str(count - int(count/60)*60) + 's\n\n'
+        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+        absolutely_professional_database.write(string)
+        absolutely_professional_database.close()
 
     time_stamp_farming = time.time()
 
@@ -248,7 +251,7 @@ def mining_return(got_ganked):
         print('arriving')
         # dump ressources
         dump_ore()
-        farm_tracker()
+        farm_tracker(got_ganked)
         # repeat?
     if get_repeat() == 0:
         playsound(Path_to_script + 'assets\\sounds\\bell.wav')
@@ -288,7 +291,12 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    main()
+    x, y, w, h = 729, 51, 14, 475
+    crop_img = get_cs_cv()[y:y + h, x:x + w]
+    crop_img = image_remove_dark(crop_img, 150)
+    show_image(crop_img)
+    # cv.imshow('img', )
+    # cv.waitKey()
 
 read_config_file()
 config_uni()
