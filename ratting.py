@@ -14,7 +14,7 @@ def read_config_file():
             set_path(tmp[1])
         if tmp[0] == 'path_to_script':
             global Path_to_script
-            Path_to_script = (tmp[1])
+            Path_to_script = tmp[1]
             set_path_to_script(Path_to_script)
         tmp = file.readline()
 
@@ -71,8 +71,12 @@ def farm_tracker(ano):
     if ano != 0:
         last_farm_site = ano
 def choose_anomaly():
-    # todo
+    base_level = 0
     ano_list = get_list_anomaly()
+    for ano in ano_list:
+        if ano[0] == 'base':
+            base_level = ano[0]
+            ano_list = ano_list.remove(ano)
     file = open('ano_pref.txt')
     tmp = file.readline().strip
     while tmp != '':
@@ -81,7 +85,7 @@ def choose_anomaly():
                 return ano
         tmp = file.readline().strip
     # todo: should swap system
-    return ano[0]
+    return ano_list[0]
 
 # TASKS
 def get_npc_count():
@@ -465,9 +469,81 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    # set_pi_planet_for_autopilot(get_planet())
-    main()
-    return
+    set_filter('Ano')
+    # todo: so much todo
+    # click filter element to expand filter
+    device_click_filter_block()
+    time.sleep(1)
+    list_ano = []
+
+    device_update_cs()
+
+    # create a list of all anomaly locations (on screen)
+    x, y, w, h = 729, 51, 14, 475
+    print(Path_to_script + 'assets\\filter_icons\\ano_left.png')
+    img_ano = cv.imread(Path_to_script + 'assets\\filter_icons\\ano_left.png')
+
+    # show_image(img_ano, 1)
+    crop_img = get_cs_cv()[y:y + h, x:x + w]
+    crop_img = image_remove_dark(crop_img, 175)
+    # show_image(crop_img, 1)
+    result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
+    threshold = 0.8
+    loc = np.where(result >= threshold)
+    # black magic do not touch
+    previous_point_y = -10
+    for pt in zip(*loc[::-1]):
+        # ignore double results
+        if pt[1] > previous_point_y + 10:
+            previous_point_y = pt[1]
+            # add_rectangle(pt[0] + x, pt[1] + y, 0, 0)
+
+            # icon offset, size of text field
+            y_text, x_text = pt[1] - 12 + y, pt[0] + 65 + x
+            text_img = get_cs_cv()[y_text:y_text + 40, x_text:x_text + 120]
+            text_img = image_remove_dark(text_img, 250)
+            raw_text = tess.image_to_string(crop_img)
+
+            icon_img = text_img[5:15, 0:7]
+            # template gen
+            # remove darker pixels, seems to be a bad idea
+            # cv.imwrite('test.png', icon_img)
+
+
+            highest_result = 0
+            lvl = 0
+            for file in os.listdir(Path_to_script + 'assets\\base_level\\small\\'):
+                lvl_icon = cv.imread(Path_to_script + 'assets\\base_level\\small\\' + file)
+                result = cv.matchTemplate(icon_img, lvl_icon, cv.TM_CCORR_NORMED)
+                min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+                if highest_result < max_val:
+                    highest_result = max_val
+                    lvl = int(file[:-4])
+            print(lvl)
+            show_image(icon_img, 1)
+
+            if 'Scout' in raw_text or 'nquis' in raw_text:
+                print('found scout')
+                playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+                device_click_filter_block()
+                save_screenshot()
+            else:
+                if 'Small' in raw_text:
+                    list_ano.append(['small', lvl, x_text, y_text])
+                else:
+                    if 'Medium' in raw_text:
+                        list_ano.append(['medium', lvl, x_text, y_text])
+                    else:
+                        if 'Large' in raw_text:
+                            list_ano.append(['large', lvl, x_text, y_text])
+                        else:
+                            if 'Base' in raw_text:
+                                print('ignore base')
+                                # list_ano.append(['base', lvl, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
+
+    for ano in list_ano:
+        print(ano)
+    return list_ano
 
 read_config_file()
 read_config_file_uni()

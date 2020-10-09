@@ -325,8 +325,8 @@ def save_screenshot():
 def add_rectangle(x, y, w, h):
     cv.rectangle(CS_cv, (x, y), (x + w, y + h),
                  color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
-def show_image(image):
-    if image.all() == 0:
+def show_image(image, add):
+    if add == 0:
         cv.imshow('tmp', CS_cv)
     else:
         cv.imshow('tmp', image)
