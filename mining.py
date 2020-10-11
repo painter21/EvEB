@@ -120,12 +120,14 @@ def mine():
     device_click_rectangle(740, 46, 161, 269)
     time.sleep(1)
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
+    time.sleep(0.5)
     device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]), asteroid[2], asteroid[3])
 
     # click filter element to expand filter
     device_click_rectangle(740, 46, 161, 269)
     time.sleep(0.5)
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
+    time.sleep(0.5)
     device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]) + 58, asteroid[2], asteroid[3])
 def wait_and_watch_out(sec):
     for i in range(int(sec/2)):
@@ -231,6 +233,8 @@ def mining_in_belt():
 def mining_return(got_ganked):
     # activate autopilot and run (maybe i got ganked?)
     activate_autopilot()
+    if get_eco_mode():
+        device_toggle_eco_mode()
     time.sleep(3)
     for module in get_module_list():
         if module[1] == 'esc':
