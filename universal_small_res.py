@@ -37,9 +37,9 @@ def read_config_file_uni():
         if tmp[0] == 'repeat':
             global repeat
             repeat = int(tmp[1])
-        if tmp[0] == 'mining_time':
-            global mining_time
-            mining_time = int(tmp[1])
+        if tmp[0] == 'safety_time':
+            global safety_time
+            safety_time = int(tmp[1])
         if tmp[0] == 'device':
             global device_nr
             device_nr = int(tmp[1])
@@ -52,6 +52,10 @@ def read_config_file_uni():
         if tmp[0] == 'start':
             global start
             start = tmp[1]
+        if tmp[0] == 'ding_when_ganked':
+            global ding_when_ganked
+            print('set ding when ganked to ', tmp[1])
+            ding_when_ganked = tmp[1]
         tmp = file.readline()
 
 # INIT GLOBAL VALUES
@@ -76,10 +80,11 @@ if 1:
     path_to_script = ''
     start = 'main'
     ship = 'frigate'
+    ding_when_ganked = 0
     preferredOrbit = 29
     planet = 0
     repeat = 0
-    mining_time = 0
+    safety_time = 300
     device_nr = 1
     name = ''
     home = 0
@@ -94,8 +99,9 @@ if 1:
         quit()
     # CS = current Screenshot
     Device = Devices[0]
+    CS = Device.screencap()
     with open(path + 'screen.png', 'wb') as f:
-        f.write(Device.screencap())
+        f.write(CS)
     CS_cv = cv.imread('screen.png')
     CS_image = Image.open('screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
@@ -103,6 +109,8 @@ if 1:
 # GETTERS
 def get_module_list():
     return ModuleList
+def get_safety_time():
+    return safety_time
 def get_eco_mode():
     return eco_mode
 def get_planet():
@@ -318,9 +326,13 @@ def image_get_blur_brightness(x, y):
 def save_screenshot():
     import random
     import string
-    file_name = ''.join(random.choice(string.ascii_lowercase) for i in range(6))
+    file_name = 'z'.join(random.choice(string.ascii_lowercase) for i in range(6))
     with open(file_name + '.png', 'wb') as h:
         h.write(CS)
+def ding_when_ganked():
+    print(ding_when_ganked)
+    if ding_when_ganked == 1:
+        playsound(path_to_script + 'assets\\sounds\\bell.wav')
 
 def add_rectangle(x, y, w, h):
     cv.rectangle(CS_cv, (x, y), (x + w, y + h),
@@ -433,7 +445,6 @@ def get_is_capsule():
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
-        print(tmp)
         ar = cv.imread(path_to_script + 'assets\\modules\\' + ship + '\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
         threshold = 0.95
@@ -441,7 +452,6 @@ def get_is_capsule():
         accepted_list = []
         for pt in zip(*loc[::-1]):
             continue_value = 1
-            print(pt)
             for point in accepted_list:
                 if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
                     continue_value = 0
@@ -486,6 +496,21 @@ def get_is_target():
         if hp_brightness - inner_brightness > 16:
             return 1
     return 0
+def get_criminal():
+    # in a small screen criminals have a 6x6 red symbol, ill check that area,
+    # if more then 12 pix are really red, i decalare it as criminal
+    x, y = [673, 613, 552, 492, 431, 370], 38
+    for i in range(6):
+        # add_rectangle(x[i], y, 5, 5)
+        crop_img = CS_cv[y:y + 6, x[i]:x[i] + 6]
+        red_pixel_count = 0
+        for row in crop_img:
+            for pixel in row:
+                if pixel[2] > 180 and int(pixel[0])+int(pixel[1]) < 160:
+                    red_pixel_count += 1
+                    if red_pixel_count > 15:
+                        return i + 1
+    return 0
 def get_module_is_active(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
@@ -515,6 +540,7 @@ def interface_show_player():
     cv.imshow('tmp', crop_img)
     cv.waitKey()
 def set_filter(string_in_name):
+    print('swap filter')
     # swaps to a filter containing the given string
     if activate_filter_window():
         time.sleep(1)
@@ -557,13 +583,16 @@ def target_action(target_nbr, action_nbr):
     device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
     device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
     return
-def wait_warp_and_set_home():
-    if not get_autopilot():
+def wait_warp_maybe_run():
+    if get_autopilot() == 0:
         set_home()
     # does nothing until speed bar goes to 15%
     device_update_cs()
+    if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
+        return 1
     if get_speed() > 15:
-        wait_warp_and_set_home()
+        wait_warp_maybe_run()
+    return 0
 def wait_warp():
     # does nothing until speed bar goes to 15%
     device_update_cs()
@@ -586,6 +615,8 @@ def activate_filter_window():
 def activate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
+    if module[1] == 'esc':
+        device_click_circle(module[2], module[3], module_icon_radius)
     if compare_colors(CS_image[y][x], activate_blue) > 15 and compare_colors(CS_image[y][x], activate_red) > 15:
         device_click_circle(module[2], module[3], module_icon_radius)
         return 1
@@ -715,13 +746,13 @@ def warp_to(item_nr, should_set_home):
     device_click_rectangle(543, 101, 174, 55)
     time.sleep(5)
     if should_set_home:
-        wait_warp_and_set_home()
+        wait_warp_maybe_run()
     else:
         wait_warp()
 def warp_randomly(item_nr, should_set_home):
     set_filter('esc')
     time.sleep(2)
-    print('warp to site')
+    print('warp to site', should_set_home)
     if item_nr == -1:
         i = 1 + int((get_filter_list_size() - 1) * random.random())
         device_click_rectangle(742, 47 + 51 * i, 158, 44)
@@ -736,9 +767,13 @@ def warp_randomly(item_nr, should_set_home):
         time.sleep(1)
         device_click_rectangle(742, 47, 158, 44)
         device_click_rectangle(543, 101, 174, 55)
-    time.sleep(5)
+    time.sleep(1)
     if should_set_home:
-        wait_warp_and_set_home()
+        device_update_cs()
+        set_filter('inin')
+        return wait_warp_maybe_run()
     else:
+        time.sleep(4)
         wait_warp()
+        return 0
 

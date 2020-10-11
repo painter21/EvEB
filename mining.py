@@ -94,6 +94,8 @@ def get_good_asteroid_from_list(ast_list):
 
 # TASKS
 def mine():
+    if get_eco_mode():
+        device_toggle_eco_mode()
     # select some asteroid
     device_update_cs()
     if get_speed() > 50:
@@ -113,6 +115,7 @@ def mine():
 
     asteroid.pop(0)
 
+    wait_and_watch_out(4)
     # click filter element to expand filter
     device_click_rectangle(740, 46, 161, 269)
     time.sleep(1)
@@ -127,7 +130,7 @@ def mine():
 def wait_and_watch_out(sec):
     for i in range(int(sec/2)):
         device_update_cs()
-        if get_filter_icon('all_ships') != 0:
+        if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
             if get_bait() == 1:
                 subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
                                  "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
@@ -137,7 +140,8 @@ def wait_and_watch_out(sec):
                 time.sleep(3)
                 mining_return(1)
                 quit()
-            device_toggle_eco_mode()
+            if get_eco_mode():
+                device_toggle_eco_mode()
             print('ganked')
             mining_return(1)
             quit()
@@ -163,8 +167,12 @@ def mining_from_station():
     mining_warp_to_random(get_random_warp())
     mining_in_belt()
 def mining_warp_to_random(maximum):
-    warp_randomly(maximum, 1)
-    wait_warp_and_set_home()
+
+    # just if something waits in site
+    if warp_randomly(maximum, 1):
+        mining_return(1)
+        return
+
     print('activating prop')
     for module in get_module_list():
         if module[1] == 'prop':
@@ -173,7 +181,7 @@ def mining_in_belt():
     device_update_cs()
 
     # check if time is up
-    if get_cargo() >= 100:
+    if get_cargo() >= 95:
         device_toggle_eco_mode()
         mining_return(0)
         return
@@ -230,6 +238,8 @@ def mining_return(got_ganked):
         if module[1] == 'prop':
             deactivate_module(module)
     if got_ganked == 1:
+        print('got ganked')
+        ding_when_ganked()
         save_screenshot()
     time.sleep(2)
 
@@ -255,9 +265,15 @@ def mining_return(got_ganked):
         playsound(Path_to_script + 'assets\\sounds\\bell.wav')
         quit()
     if got_ganked == 1:
-        time.sleep(300)
+        time.sleep(get_safety_time())
     mining_from_station()
     return
+def test_esc():
+    set_filter('ing')
+    device_toggle_eco_mode()
+    wait_and_watch_out(200)
+    device_toggle_eco_mode()
+    mining_return(0)
 
 def mining_from_station_in_null():
     # set destination
@@ -289,12 +305,8 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    x, y, w, h = 729, 51, 14, 475
-    crop_img = get_cs_cv()[y:y + h, x:x + w]
-    crop_img = image_remove_dark(crop_img, 150)
-    show_image(crop_img)
-    # cv.imshow('img', )
-    # cv.waitKey()
+    device_update_cs()
+    print('result: ', get_criminal())
 
 read_config_file()
 config_uni()

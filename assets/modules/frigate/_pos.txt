@@ -1,3 +1,4 @@
 Afterburner prop 8 16
 Miner harvest 13 15
 Stab esc 10 11
+Plate esc 11 6
