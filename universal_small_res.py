@@ -226,8 +226,7 @@ def compare_colors(a, b):
     fir = abs(int(a[0]) - int(b[0]))
     sec = abs(int(a[1]) - int(b[1]))
     thi = abs(int(a[2]) - int(b[2]))
-    fou = abs(int(a[3]) - int(b[3]))
-    return (fir + sec + thi + fou) / 10
+    return int((fir + sec + thi) / 7.5)
 def get_point_in_circle(x, y, r):
     a = 3.  # shape
     angle = np.random.default_rng().random() * np.pi
@@ -487,12 +486,11 @@ def get_is_locked(target):
         x, y, h = 629, 32, 12
         pix_not_gray = 0
         for i in range(h):
-            if abs(CS_cv[y + i][x][0] - CS_cv[y + i][x][1]) > 10 or \
-                    abs(CS_cv[y + i][x][1] - CS_cv[y + i][x][2]) > 10 or \
-                    100 > CS_cv[y + i][x][0] or CS_cv[y + i][x][0] > 160:
+            if abs(int(CS_cv[y + i][x][0]) - CS_cv[y + i][x][1]) > 4 or \
+                    abs(int(CS_cv[y + i][x][1]) - CS_cv[y + i][x][2]) > 4 or \
+                    58 > CS_cv[y + i][x][0] or CS_cv[y + i][x][0] > 160:
                 pix_not_gray += 1
         if pix_not_gray < 4:
-            print('found target:', target + 1)
             return 1
         return 0
     outer_x, outer_y, inner_x, inner_y, hp_x, hp_y = 631, 16, 671, 22, 656, 50
@@ -503,7 +501,6 @@ def get_is_locked(target):
     # print(outer_brightness, inner_brightness, hp_brightness - inner_brightness)
     if outer_brightness*9/12 > inner_brightness:
         if hp_brightness - inner_brightness > 16:
-            print('found target:', target + 1)
             return 1
     return 0
 def get_criminal():
@@ -536,7 +533,6 @@ def get_tar_cross():
     return 1
 def get_module_is_active(module):
     if module[1] == 'drone':
-        tar_cross_green = [167, 184, 180]
         # i doubt always getting the perfect center for drone modules, so we have to look out for the cross
         for i in range(5):
             x, y, h = module[2] - 22 + i, module[3] - 27, 19
@@ -548,9 +544,9 @@ def get_module_is_active(module):
             if pix_not_green < 9:
                 return 1
         return 0
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
+    activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
-    if compare_colors(CS_image[y][x], activate_blue) > 15:
+    if compare_colors(CS_image[y][x], activate_blue) < 15:
         return 1
     return 0
 def get_inventory_value_small_screen(is_open):
@@ -629,7 +625,7 @@ def filter_action(target_nbr, action_nbr, expected_list_size):
     # add_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
     # add_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57) + dd_off_y * action_nbr, 170, 47)
     device_click_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57 + 5) + dd_off_y * action_nbr, 170, 47)
-    show_image(0, 0)
+    # show_image(0, 0)
     return
 def filter_swipe(direction):
     # 0 is swipe down
@@ -667,11 +663,12 @@ def activate_filter_window():
         return 1
     return 0
 def activate_module(module):
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
+    activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
     if module[1] == 'esc':
         device_click_circle(module[2], module[3], module_icon_radius)
-    if get_module_is_active(module) == 0 and compare_colors(CS_image[y][x], activate_red) > 15:
+    # print(module[1], get_module_is_active(module), compare_colors(CS_image[y][x], activate_red), CS_image[y][x])
+    if get_module_is_active(module) == 0 and compare_colors(CS_image[y][x], activate_red) > 8:
         device_click_circle(module[2], module[3], module_icon_radius)
         return 1
     return 0
@@ -691,6 +688,11 @@ def deactivate_module(module):
 
 
 # PLAIN SCRIPTS
+def dump_items():
+    # open inventory
+    device_click_rectangle(5, 61, 83, 26)
+    time.sleep(1.5)
+    dump_tail()
 def dump_ore():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
@@ -698,6 +700,8 @@ def dump_ore():
     # venture cargo
     device_click_rectangle(18, 393, 173, 41)
     time.sleep(1.5)
+    dump_tail()
+def dump_tail():
     # select all
     device_click_rectangle(701, 458, 68, 60)
     time.sleep(1)
@@ -709,7 +713,6 @@ def dump_ore():
     time.sleep(5)
     # click on close
     device_click_circle(926, 30, 10)
-    return 1
 def set_home():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
@@ -795,11 +798,15 @@ def undock_and_modules():
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
     update_modules()
-def warp_to(item_nr, distance, should_set_home):
+def warp_to(target_nbr, distance, should_set_home):
+    target_nbr -= 1
+    action_nbr = 1
+    tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
+    dd_x, dd_off_y = 539, 57
     print('warp to site')
     device_click_filter_block()
-    device_click_rectangle(742, 47 + 51 * item_nr, 158, 44)
-    device_swipe_from_circle(643, 125 + 51 * item_nr, 25, distance, 0)
+    device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
+    device_swipe_from_circle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5), 25, distance, 0)
     # implementing catch?
     time.sleep(5)
     if should_set_home:

@@ -139,14 +139,14 @@ def warp_and_hide(maximus_dist):
         if module[1] == 'prop':
             deactivate_module(module)
 def get_list_anomaly():
-    set_filter('Ano')
     # todo: it is way too inaccurate
     # click filter element to expand filter
-    device_click_filter_block()
-    time.sleep(1)
+
+    #filter swap should not be nessessary, only warp to ano calls it anyways
+    time.sleep(0.5)
+    device_update_cs()
     list_ano = []
 
-    device_update_cs()
 
     # create a list of all anomaly locations (on screen)
     x, y, w, h = 729, 51, 14, 475
@@ -247,30 +247,32 @@ def work_on_container():
     filter_action(1, 2, 5)
     x, y = 362, 457
     checkpoint = 0
-    while time.time() < waiting_time + 40:
+    while time.time() < waiting_time + 50:
         device_update_cs()
         danger_handling_farming()
         if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
             device_click_circle(x, y, 15)
+            # wreck need a sec to disappear
+            time.sleep(2)
             return
 
         # re-click if if takes longer
-        if checkpoint == 0 and time.time() > waiting_time + 8:
-            filter_action(1, 2, 5)
-            checkpoint = 1
-        if checkpoint == 1 and time.time() > waiting_time + 18:
+        if checkpoint == 0 and time.time() > waiting_time + 24:
             filter_action(1, 2, 5)
             checkpoint = 1
 
         time.sleep(2)
 def warp_to_ano():
     set_filter('Ano')
+    device_click_filter_block()
+    time.sleep(2)
     anomaly = choose_anomaly()
     print()
     print(anomaly)
     # sometimes the interface times out and i have to reopen it
     device_click_filter_block()
     warp_to(anomaly[2], preferredOrbit, 0)
+    set_filter('PvE')
     time.sleep(3)
     time.sleep(7)
     wait_warp()
@@ -294,8 +296,10 @@ def danger_handling_combat():
     if get_filter_icon('all_ships.png'):
         print('player detected')
         # todo: player handling ratting
-        for i in range(3):
-            combat_return(1)
+        activate_autopilot()
+        time.sleep(4)
+        activate_the_modules('esc')
+        time.sleep(5)
         wait_warp()
         warp_to_ano()
         combat()
@@ -305,13 +309,14 @@ def danger_handling_farming():
     # todo player handling
     if get_filter_icon('all_ships.png'):
         print('player detected')
-        for i in range(3):
-            warp_and_hide(4)
+        activate_autopilot()
+        time.sleep(4)
+        activate_the_modules('esc')
+        time.sleep(5)
         wait_warp()
         warp_to_ano()
         combat()
         return 1
-    repair(100)
     return 0
 
 
@@ -331,17 +336,13 @@ def combat_start_from_system():
     combat()
 
 def loot():
+    device_update_cs()
     print('looting')
     # swap to container view
     # init
     if 1:
         # turn on prop module
         activate_the_modules('prop')
-
-        set_filter('PvE')
-
-        # scroll up
-        filter_swipe(1)
 
         # find and click wreck icon in filter bar
         tmp = get_filter_icon('wreck')
@@ -356,21 +357,24 @@ def loot():
         device_click_circle(x, y, 10)
 
     while 1:
-        # repair and check for players
-        danger_handling_farming()
-
+        device_update_cs()
         # check for rats respawn late
         if get_npc_count() > 0:
             combat()
 
+        # repair and check for players
+        danger_handling_farming()
+
         if get_cargo() == 100:
             print('cargo full')
+            set_home()
             combat_return(0)
             return
 
         tmp = get_filter_icon('wreck')
         if tmp == 0:
             if get_cargo() > 75:
+                set_home()
                 combat_return(0)
             else:
                 print('site done')
@@ -381,23 +385,37 @@ def loot():
 def combat():
     # todo: lock delay for no dmg split
     print('combat')
-    set_filter('PvE')
+    # set_filter('PvE')
+
+    activate_the_modules('prop')
+
     tmp_weapon = time.time()
     tmp_cd = time.time() + 30
+    last_npc_count = 0
+
     while 1:
         # check hp, cap and other players
         device_update_cs()
         danger_handling_combat()
 
-        if get_is_locked(1):
-            # lock second one?
-            if get_is_locked(2) == 0 and get_tar_cross():
-                target_action(2, 1)
+        # start of wave/enter combat
+        tmp = get_npc_count()
+        if tmp == 0:
+            loot()
+        if last_npc_count < tmp:
+            target_action(1, 1)
+            target_action(2, 1)
+            time.sleep(1)
+            device_update_cs()
+        last_npc_count = tmp
+
+        # get locked 1 is not really that reliable, lots of false negative
+        if get_is_locked(2) or get_npc_count() == 1:
 
             # weapons
             if tmp_weapon < time.time():
-                activate_the_modules('weapon')
                 if activate_the_modules('drone'):
+                    activate_the_modules('weapon')
                     tmp_weapon = time.time() + 10
 
             # cd items
@@ -409,15 +427,53 @@ def combat():
 
             # todo: improve ewar?
 
-        else:
-            if get_tar_cross():
-                target_action(1, 1)
-            else:
-                loot()
+        # lock second one?
+        if get_is_locked(2) == 0 and get_tar_cross():
+            target_action(2, 1)
 
+        time.sleep(2)
     # todo react to close enemys, nos, web, etc
 
-def combat_return(get_ganked):
+def combat_return(got_ganked):
+    # activate autopilot and run (maybe i got ganked?)
+    activate_autopilot()
+    if get_eco_mode():
+        device_toggle_eco_mode()
+    time.sleep(3)
+    for module in get_module_list():
+        if module[1] == 'esc':
+            activate_module(module)
+        if module[1] == 'prop':
+            deactivate_module(module)
+    device_click_rectangle(246, 269, 77, 73)
+    if got_ganked == 1:
+        print('got ganked')
+        ding_when_ganked()
+        save_screenshot()
+    time.sleep(2)
+
+    print('checking if dead')
+    device_update_cs()
+    if get_is_capsule() or get_is_in_station():
+        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+        absolutely_professional_database.write(
+            get_name() + ' died at:' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)) + '\n\n')
+        absolutely_professional_database.close()
+        quit()
+    else:
+        print('going home')
+        # wait until autopilot gone
+        wait_end_navigation(20)
+
+        print('arriving')
+        # dump ressources
+        dump_items()
+        farm_tracker(got_ganked)
+        # repeat?
+    if get_repeat() == 0:
+        playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+        quit()
+    combat_start_from_station()
     return
 
 # STARTS
@@ -425,8 +481,7 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    update_modules()
-    activate_the_modules('weapon')
+    combat_start_from_system()
     # combat_start_from_system()
 
 read_config_file()

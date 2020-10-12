@@ -97,13 +97,14 @@ def mine():
     if get_eco_mode():
         device_toggle_eco_mode()
     # select some asteroid
-    device_update_cs()
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
         time.sleep(6)
     set_filter('inin')
     device_update_cs()
     tmp = get_filter_icon('asteroid')
+    print('activating prop')
+    activate_the_modules('prop')
     if tmp == 0:
         mining_warp_to_random(-1)
         mining_in_belt()
@@ -170,16 +171,10 @@ def mining_from_station():
     mining_warp_to_random(get_random_warp())
     mining_in_belt()
 def mining_warp_to_random(maximum):
-
     # just if something waits in site
     if warp_randomly(maximum, 1):
         mining_return(1)
         return
-
-    print('activating prop')
-    for module in get_module_list():
-        if module[1] == 'prop':
-            activate_module(module)
 def mining_in_belt():
     device_update_cs()
 
@@ -195,14 +190,14 @@ def mining_in_belt():
     stop = 0
     for module in get_module_list():
         if module[1] == 'harvest' and stop == 0:
-            if get_module_is_active(module):
+            if not get_module_is_active(module):
                 activate_module(module)
                 if get_eco_mode():
                     wait_and_watch_out(10)
                 else:
                     wait_and_watch_out(2)
                 device_update_cs()
-                if get_module_is_active(module):
+                if not get_module_is_active(module):
                     miners_active = 0
                     stop = 1
     if not miners_active:
@@ -312,7 +307,6 @@ def main():
     mining_from_station()
 def custom():
     device_update_cs()
-    print('result: ', get_criminal())
 
 read_config_file()
 config_uni()
