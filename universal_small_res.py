@@ -125,8 +125,6 @@ def get_random_warp():
     return random_warp
 def get_repeat():
     return repeat
-def test_main():
-    main()
 def get_start():
     return start
 def set_path(pa):
@@ -177,21 +175,16 @@ def get_hp():
     length_lists = len(health_st_list)
     for i in range(length_lists):
         pos = health_st_list[i]
-        print(CS_image[pos[1]][pos[0]][2])
         if CS_image[pos[1]][pos[0]][2] > 90:
             health_str = int(100-i*100/length_lists)
             break
-    print('-----------')
     for i in range(length_lists):
         pos = health_ar_list[i]
-        print(CS_image[pos[1]][pos[0]][2])
         if CS_image[pos[1]][pos[0]][2] > 90:
             health_arm = int(100-i*100/length_lists)
             break
-    print('-----------')
     for i in range(length_lists):
         pos = health_sh_list[i]
-        print(CS_image[pos[1]][pos[0]][2])
         if CS_image[pos[1]][pos[0]][2] > 90:
             health_shi = int(100-i*100/length_lists)
             break
@@ -209,10 +202,9 @@ def config_uni():
     global CS_cv, CS_image, Device
     # connect to Bluestacks
     if len(Devices) < device_nr + 1:
-        print('no device attached')
+        print('not enough devices attached')
         quit()
     # CS = current Screenshot
-    print(Devices)
     Device = Devices[device_nr]
     cs = Device.screencap()
     with open(path + 'screen.png', 'wb') as f:
@@ -220,8 +212,6 @@ def config_uni():
     CS_cv = cv.imread(path + 'screen.png')
     CS_image = Image.open(path + 'screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
-def main():
-    print('restart wont be overwritten')
 def power_nap():
     time.sleep(np.random.default_rng().random() * 0.3 + 0.5)
 def device_update_cs():
@@ -256,6 +246,7 @@ def device_click_rectangle(x, y, w, h):
     y = h * np.random.default_rng().random() + y
     Device.shell(f'input touchscreen tap {x} {y}')
     power_nap()
+    return x, y
 def device_swipe_from_circle(x, y, r, d, direction):
     tmp = get_point_in_circle(x, y, r)
     x, y = tmp[0], tmp[1]
@@ -269,7 +260,7 @@ def device_swipe_from_circle(x, y, r, d, direction):
         angle = np.pi / 2 * direction
     else:
         angle = np.random.default_rng().random() * np.pi * 1.5
-    r = 130 + d * 2.4
+    r = 77 + d * 1.5
 
     Device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
     power_nap()
@@ -363,8 +354,6 @@ def repair(desired_hp):
 def update_modules():
     global ModuleList
     ModuleList = []
-    print('path ')
-    print(path_to_script + 'assets\\modules\\' + ship + '\\_pos.txt')
     file = open(path_to_script + 'assets\\modules\\' + ship + '\\_pos.txt')
     tmp = file.readline()
     while tmp != '':
@@ -388,7 +377,6 @@ def update_modules():
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
     print(str(len(ModuleList)) + ' Modules found')
-    print(ModuleList)
 def get_speed():
     tmp = 0
     stop = 0
@@ -479,13 +467,34 @@ def get_filter_icon(filter_name):
             image2 = cv.imread(path_to_script + 'assets\\filter_icons\\' + icon_file)
             result = cv.matchTemplate(crop_img, image2, cv.TM_CCORR_NORMED)
             min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-            if max_val > 0.99:
+            # print(max_val)
+            border = 0.99
+            if filter_name == 'npc' or filter_name == 'wreck':
+                border = 0.94
+            if max_val > border:
+                # icon gen
+                # crop_img = CS_cv[y+max_loc[1]:y+max_loc[1] + 10, x+max_loc[0]:x+max_loc[0] + 6]
+                # show_image(image_remove_dark(crop_img, 130), 1)
                 return max_loc[0] + x, max_loc[1] + y
     return 0
 def get_filter_list_size():
     return random_warp
 # todo: add option to check for more targets
-def get_is_target():
+def get_is_locked(target):
+    target -= 1
+    # if target = 0
+    if target == 1:
+        x, y, h = 629, 32, 12
+        pix_not_gray = 0
+        for i in range(h):
+            if abs(CS_cv[y + i][x][0] - CS_cv[y + i][x][1]) > 10 or \
+                    abs(CS_cv[y + i][x][1] - CS_cv[y + i][x][2]) > 10 or \
+                    100 > CS_cv[y + i][x][0] or CS_cv[y + i][x][0] > 160:
+                pix_not_gray += 1
+        if pix_not_gray < 4:
+            print('found target:', target + 1)
+            return 1
+        return 0
     outer_x, outer_y, inner_x, inner_y, hp_x, hp_y = 631, 16, 671, 22, 656, 50
     # is something targeted?
     outer_brightness = image_get_blur_brightness(outer_x, outer_y)
@@ -494,6 +503,7 @@ def get_is_target():
     # print(outer_brightness, inner_brightness, hp_brightness - inner_brightness)
     if outer_brightness*9/12 > inner_brightness:
         if hp_brightness - inner_brightness > 16:
+            print('found target:', target + 1)
             return 1
     return 0
 def get_criminal():
@@ -511,7 +521,33 @@ def get_criminal():
                     if red_pixel_count > 15:
                         return i + 1
     return 0
+def get_tar_cross():
+    tar_cross_green = [136, 138, 122]
+    if image_get_blur_brightness(597, 341) > 30:
+        return 0
+    x, y, h = 599, 333, 15
+    pix_not_green = 0
+    for i in range(h):
+        for c in range(3):
+            if abs(CS_cv[y + i][x][c] - tar_cross_green[c]) > 20:
+                pix_not_green += 1
+    if pix_not_green > 4:
+        return 0
+    return 1
 def get_module_is_active(module):
+    if module[1] == 'drone':
+        tar_cross_green = [167, 184, 180]
+        # i doubt always getting the perfect center for drone modules, so we have to look out for the cross
+        for i in range(5):
+            x, y, h = module[2] - 22 + i, module[3] - 27, 19
+            pix_not_green = 0
+            for i in range(h):
+                for c in range(3):
+                    if CS_cv[y + i][x][c] < 135:
+                        pix_not_green += 1
+            if pix_not_green < 9:
+                return 1
+        return 0
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
     if compare_colors(CS_image[y][x], activate_blue) > 15:
@@ -550,16 +586,16 @@ def set_filter(string_in_name):
             time.sleep(1)
             device_update_cs()
     # Filter Header, use the cv.imshow to see if it fits
-    x, y, w, h = 767, 7, 74, 30
+    x, y, w, h, y_first_option, y_off = 767, 7, 74, 30, 75, 52
     crop_img = CS_image[y:y + h, x:x + w]
     if string_in_name not in tess.image_to_string(crop_img):
         # TODO: improve
         device_click_rectangle(x, y, w, h)
         if string_in_name in 'Anomalies':
-            device_click_rectangle(x, 118, w, h)
+            device_click_rectangle(x, y_first_option, w, h)
             return
         if string_in_name in 'PvE':
-            device_click_rectangle(x, 206, w, h)
+            device_click_rectangle(x, y_first_option + y_off, w, h)
             return
         if string_in_name in 'esc':
             device_click_rectangle(731, 338, 180, 45)
@@ -583,11 +619,29 @@ def target_action(target_nbr, action_nbr):
     device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
     device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
     return
+def filter_action(target_nbr, action_nbr, expected_list_size):
+    target_nbr -= 1
+    action_nbr -= 1
+    tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
+    dd_x, dd_off_y = 539, 57
+    device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
+    # device_update_cs()
+    # add_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
+    # add_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57) + dd_off_y * action_nbr, 170, 47)
+    device_click_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57 + 5) + dd_off_y * action_nbr, 170, 47)
+    show_image(0, 0)
+    return
+def filter_swipe(direction):
+    # 0 is swipe down
+    if direction == 0:
+        device_swipe_from_circle(822, 493, 20, 400, 3)
+        return
+    device_swipe_from_circle(822, 100, 20, 400, 1)
 def wait_warp_maybe_run():
-    if get_autopilot() == 0:
-        set_home()
     # does nothing until speed bar goes to 15%
     device_update_cs()
+    if get_autopilot() == 0:
+        set_home()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
         return 1
     if get_speed() > 15:
@@ -617,10 +671,17 @@ def activate_module(module):
     x, y = module[2] + 2, module[3] - module_icon_radius
     if module[1] == 'esc':
         device_click_circle(module[2], module[3], module_icon_radius)
-    if compare_colors(CS_image[y][x], activate_blue) > 15 and compare_colors(CS_image[y][x], activate_red) > 15:
+    if get_module_is_active(module) == 0 and compare_colors(CS_image[y][x], activate_red) > 15:
         device_click_circle(module[2], module[3], module_icon_radius)
         return 1
     return 0
+def activate_the_modules(its_name):
+    tmp = 0
+    for module in ModuleList:
+        if module[1] == its_name:
+            if activate_module(module):
+                tmp = 1
+    return tmp
 def deactivate_module(module):
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
@@ -734,16 +795,12 @@ def undock_and_modules():
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
     update_modules()
-def warp_to(item_nr, should_set_home):
-    set_filter('esc')
-    time.sleep(2)
+def warp_to(item_nr, distance, should_set_home):
     print('warp to site')
+    device_click_filter_block()
     device_click_rectangle(742, 47 + 51 * item_nr, 158, 44)
-    device_click_rectangle(543, 101 + 51 * item_nr, 174, 55)
-    time.sleep(1)
-    # fall back
-    device_click_rectangle(742, 47, 158, 44)
-    device_click_rectangle(543, 101, 174, 55)
+    device_swipe_from_circle(643, 125 + 51 * item_nr, 25, distance, 0)
+    # implementing catch?
     time.sleep(5)
     if should_set_home:
         wait_warp_maybe_run()
@@ -770,6 +827,8 @@ def warp_randomly(item_nr, should_set_home):
     time.sleep(1)
     if should_set_home:
         device_update_cs()
+        if get_autopilot() == 0:
+            set_home()
         set_filter('inin')
         return wait_warp_maybe_run()
     else:

@@ -100,6 +100,7 @@ def mine():
     device_update_cs()
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
+        time.sleep(6)
     set_filter('inin')
     device_update_cs()
     tmp = get_filter_icon('asteroid')
@@ -183,7 +184,7 @@ def mining_in_belt():
     device_update_cs()
 
     # check if time is up
-    if get_cargo() >= 95:
+    if get_cargo() > 95:
         device_toggle_eco_mode()
         mining_return(0)
         return
@@ -205,7 +206,7 @@ def mining_in_belt():
                     miners_active = 0
                     stop = 1
     if not miners_active:
-        if get_is_target():
+        if get_is_locked(1):
             wait_and_watch_out(20)
             device_swipe_from_circle(435, 265, 250, 1, 0)
             mining_in_belt()
@@ -241,6 +242,7 @@ def mining_return(got_ganked):
             activate_module(module)
         if module[1] == 'prop':
             deactivate_module(module)
+    device_click_rectangle(246, 269, 77, 73)
     if got_ganked == 1:
         print('got ganked')
         ding_when_ganked()

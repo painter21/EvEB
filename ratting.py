@@ -1,6 +1,5 @@
 # only works on 960x540
 
-from numpy import random
 from universal_small_res import *
 
 last_farm_site, start_farm_time, last_inventory_value = '', time.time(), 0
@@ -17,6 +16,9 @@ def read_config_file():
             Path_to_script = tmp[1]
             set_path_to_script(Path_to_script)
         tmp = file.readline()
+
+if 1:
+    last_npc_icon_x, last_npc_icon_y = 0, 0
 
 # INTERNAL
 def farm_tracker(ano):
@@ -73,58 +75,62 @@ def farm_tracker(ano):
 def choose_anomaly():
     base_level = 0
     ano_list = get_list_anomaly()
+    new_ano_list = []
     for ano in ano_list:
         if ano[0] == 'base':
             base_level = ano[0]
-            ano_list = ano_list.remove(ano)
+        else:
+            new_ano_list.append(ano)
     file = open('ano_pref.txt')
-    tmp = file.readline().strip
+    tmp = file.readline()
     while tmp != '':
-        for ano in ano_list:
-            if ano[0] == tmp:
+        tmp = str(tmp).split()
+        for ano in new_ano_list:
+            if ano[0] == tmp[1] and str(ano[1]) == tmp[0]:
                 return ano
-        tmp = file.readline().strip
+        tmp = file.readline()
     # todo: should swap system
     return ano_list[0]
+def get_npc_icon_current_loc():
+    w = 5
+    for off in range(3):
+        pix_not_red = 0
+        for i in range(w):
+            if get_cs_cv()[last_npc_icon_y + off - 1][last_npc_icon_x + i][0] < 110 or \
+                    get_cs_cv()[last_npc_icon_y + off - 1][last_npc_icon_x + i][1] > 50 or \
+                    get_cs_cv()[last_npc_icon_y + off - 1][last_npc_icon_x + i][2] > 70:
+                pix_not_red += 1
+        if pix_not_red < 1:
+            return 1
+    return 0
+def get_npc_count():
+    # only returns 0,1 correctly, more = 2
+
+    # updates the location, if needed
+    global last_npc_icon_x, last_npc_icon_y
+    if get_npc_icon_current_loc() == 0:
+        tmp = get_filter_icon('npc')
+        if tmp == 0:
+            return 0
+        else:
+            last_npc_icon_x, last_npc_icon_y = tmp
+
+    # check for 1 enemy
+    h, x_off, y_off = 9, 13, 7
+    pix_not_right = 0
+    for i in range(h):
+        if int(get_cs_cv()[last_npc_icon_y + i + y_off][last_npc_icon_x + x_off][0]) + \
+                get_cs_cv()[last_npc_icon_y + i + y_off][last_npc_icon_x + x_off][1] + \
+                get_cs_cv()[last_npc_icon_y + i + y_off][last_npc_icon_x + x_off][2] < 400:
+            pix_not_right += 1
+    if pix_not_right < 3:
+        return 1
+    return 2
+
 
 # TASKS
-def get_npc_count():
-    # todo: test for 10+ enemys
-    set_filter('PvE')
-    x, y, w, h = 1547, 86, 18, 445
-    as_icon = cv.imread('assets\\enemy_npc.png')
-    crop_img = CS_cv[y:y + h, x:x + w]
-    result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
-    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    if max_val > 0.95:
-        y = max_loc[1] + y
-        x = max_loc[0] + 10 + x
-        h, w = 35, 25
-        crop_img = CS_cv[y:y + h, x:x + w]
-        blank_img = np.zeros((h, w * 2, 3), np.uint8)
-        line = 0
-        while line < h - 2:
-            row = 0
-            while row < w - 2:
-                brightness = 0
-                for color in crop_img[line][row]:
-                    brightness += color
-                    if brightness > 300:
-                        blank_img[line][row] = crop_img[line][row]
-                        blank_img[line][row + w - 10] = crop_img[line][row]
-                row += 1
-            line += 1
-        raw_text = tess.image_to_string(blank_img).strip()
-        raw_text = re.sub('\D', '', raw_text)
-        tmp = 0
-        if int(len(raw_text)) == 0:
-            return 2
-        while tmp < int(len(raw_text) / 2):
-            raw_text = raw_text[:-1]
-            tmp += 1
-        return int(raw_text)
-    return 0
-def flee(maximus_dist):
+def warp_and_hide(maximus_dist):
+    # todo
     set_filter('esc')
     warp_randomly(maximus_dist, 1)
     for module in ModuleList:
@@ -134,89 +140,77 @@ def flee(maximus_dist):
             deactivate_module(module)
 def get_list_anomaly():
     set_filter('Ano')
-    # todo: so much todo
+    # todo: it is way too inaccurate
     # click filter element to expand filter
     device_click_filter_block()
+    time.sleep(1)
     list_ano = []
 
     device_update_cs()
 
     # create a list of all anomaly locations (on screen)
     x, y, w, h = 729, 51, 14, 475
-    img_ano = cv.imread('assets\\filter_icons\\ano_left.png')
-    crop_img = CS_cv[y:y + h, x:x + w]
-    image_remove_dark(crop_img, 75)
-    # show_image(crop_img)
+    img_ano = cv.imread(Path_to_script + 'assets\\filter_icons\\ano_left.png')
+
+    # show_image(img_ano, 1)
+    crop_img = get_cs_cv()[y:y + h, x:x + w]
+    crop_img = image_remove_dark(crop_img, 175)
+    # show_image(crop_img, 1)
     result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
-    threshold = 0.90
+    threshold = 0.8
     loc = np.where(result >= threshold)
     # black magic do not touch
-    previous_point_y = 0
-    first_run = 1
+    previous_point_y = -10
     for pt in zip(*loc[::-1]):
         # ignore double results
         if pt[1] > previous_point_y + 10:
             previous_point_y = pt[1]
-            if first_run == 1:
-                first_run = 0
-            else:
+            # add_rectangle(pt[0] + x, pt[1] + y, 0, 0)
 
-                # icon offset, size of text field
-                y_text, x_text = pt[1] - 12, pt[0] + 65 + x
-                crop_img = CS_cv[y_text:y_text + 40, x_text:x_text + 120]
+            # icon offset, size of text field
+            y_text, x_text = pt[1] - 12 + y, pt[0] + 65 + x
+            filter_list_nr = int((y_text - 40)/52)
+            if filter_list_nr > 0:
+                text_img = get_cs_cv()[y_text:y_text + 40, x_text:x_text + 120]
+                text_img = image_remove_dark(text_img, 200)
+                raw_text = tess.image_to_string(text_img)
+                # show_image(text_img, 1)
+                icon_img = text_img[5:15, 0:7]
+                # template gen
+                # remove darker pixels, seems to be a bad idea
+                # cv.imwrite('test.png', icon_img)
 
-                # find the level of the anomaly
-                # find icon
-                crop_ano_level_img = CS_cv[y_text + 3:y_text + 28, x_text:x_text + 13]
-                # remove darker pixels
-                row_count = -1
-                for row in crop_ano_level_img:
-                    row_count += 1
-                    pixel_count = -1
-                    for pixel in row:
-                        pixel_count += 1
-                        brightness = 0
-                        for color in pixel:
-                            brightness += color
-                        if brightness < 250:
-                            crop_ano_level_img[row_count][pixel_count] = [0, 0, 0]
-                # cv.imwrite('tmp.png', crop_ano_level_img)
-
-                # compare it to all icon files
                 highest_result = 0
                 lvl = 0
-                for file in os.listdir('assets\\base_level'):
-                    lvl_icon = cv.imread('assets\\base_level\\' + file)
-                    cv.waitKey()
-                    result = cv.matchTemplate(crop_ano_level_img, lvl_icon, cv.TM_CCORR_NORMED)
+                for file in os.listdir(Path_to_script + 'assets\\base_level\\small\\'):
+                    lvl_icon = cv.imread(Path_to_script + 'assets\\base_level\\small\\' + file)
+                    result = cv.matchTemplate(icon_img, lvl_icon, cv.TM_CCORR_NORMED)
                     min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
                     if highest_result < max_val:
                         highest_result = max_val
                         lvl = int(file[:-4])
+                # print(lvl, raw_text.strip())
+                # show_image(icon_img, 1)
 
-                raw_text = tess.image_to_string(crop_img)
-
-                # Todo: i should improve that at some point
-                x_ano_field, y_ano_field = pt[0] + x, pt[1] - 28
                 if 'Scout' in raw_text or 'nquis' in raw_text:
-                    list_ano.append(['scout', lvl, x_ano_field, y_ano_field, 310, 80])
+                    print('found scout')
+                    playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+                    device_click_filter_block()
+                    save_screenshot()
                 else:
-                    if 'Small' in raw_text:
-                        list_ano.append(['small', lvl, x_ano_field, y_ano_field, 310, 80])
+                    if 'mall' in raw_text:
+                        list_ano.append(['small', lvl, filter_list_nr])
                     else:
-                        if 'Medium' in raw_text:
-                            list_ano.append(['medium', lvl, x_ano_field, y_ano_field, 310, 80])
+                        if 'edium' in raw_text:
+                            list_ano.append(['medium', lvl, filter_list_nr])
                         else:
-                            if 'Large' in raw_text:
-                                list_ano.append(['large', lvl, x_ano_field, y_ano_field, 310, 80])
+                            if 'arge' in raw_text:
+                                list_ano.append(['large', lvl, filter_list_nr])
                             else:
-                                if 'Base' in raw_text:
-                                    print('ignore base')
-                                    # list_ano.append(['base', lvl, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
-                # icon cv.rectangle(crop_img, pt, (pt[0] + 15, pt[1] + 15), (0, 0, 255), 2)
-                # text field cv.rectangle(CS_cv, (x_text, y_text), (x_text + 204, y_text + 52), (0, 0, 255), 2)
-            # cv.imshow('.', CS_cv)
-            # cv.waitKey()
+                                if 'Bas' in raw_text:
+                                    list_ano.append(['base', lvl, filter_list_nr])
+                                else:
+                                    list_ano.append(['unknown', lvl, filter_list_nr])
     for ano in list_ano:
         print(ano)
     return list_ano
@@ -248,35 +242,27 @@ def wait_for_cap():
             return
         wait_and_watch_out(4)
 def work_on_container():
-    waiting_time = 10
-    device_click_rectangle(1210, 67, 314, 88)
-    device_click_rectangle(903, 168, 301, 91)
-    while 1:
-        for i in range(waiting_time):
-            device_update_cs()
-            time.sleep(0.1)
-            if CS_image[772][600][1] > 85:
-                count = 0
-                while 1:
-                    device_click_rectangle(454, 748, 261, 67)
-                    device_update_cs()
-                    if CS_image[772][600][1] < 85:
-                        break
-                    if count > 20:
-                        playsound('assets\\sounds\\bell.wav')
-                    count += 1
-                    break
-                return 0
-            # if danger_handling_farming() == 1:
-            #    return 1
-            time.sleep(0.9)
-        waiting_time *= 2
-        print('increased waiting time to', waiting_time)
-        if waiting_time > 20:
-            return 0
-        repair(100)
-        if get_speed() == 0:
-            device_click_circle(590, 754, 25)
+    loot_green = [48, 94, 87]
+    waiting_time = time.time()
+    filter_action(1, 2, 5)
+    x, y = 362, 457
+    checkpoint = 0
+    while time.time() < waiting_time + 40:
+        device_update_cs()
+        danger_handling_farming()
+        if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+            device_click_circle(x, y, 15)
+            return
+
+        # re-click if if takes longer
+        if checkpoint == 0 and time.time() > waiting_time + 8:
+            filter_action(1, 2, 5)
+            checkpoint = 1
+        if checkpoint == 1 and time.time() > waiting_time + 18:
+            filter_action(1, 2, 5)
+            checkpoint = 1
+
+        time.sleep(2)
 def warp_to_ano():
     set_filter('Ano')
     anomaly = choose_anomaly()
@@ -284,23 +270,15 @@ def warp_to_ano():
     print(anomaly)
     # sometimes the interface times out and i have to reopen it
     device_click_filter_block()
-    warp_to(preferredOrbit, anomaly[2], anomaly[3], anomaly[4], anomaly[5])
+    warp_to(anomaly[2], preferredOrbit, 0)
     time.sleep(3)
-    farm_tracker(anomaly)
     time.sleep(7)
     wait_warp()
 
     # swap to PvE
-def update_and_checkup_for_combat():
-    device_update_cs()
-    set_filter('PvE')
-
+def danger_handling_combat():
     # check hp
     repair(85)
-
-    # players, hull dmg?
-    return danger_handling_combat()
-def danger_handling_combat():
     if get_hp()[2] < 90:
         print('hull critical')
         combat_return(0)
@@ -308,13 +286,14 @@ def danger_handling_combat():
     if get_cap() < 10:
         print('capacitor critical')
         for i in range(3):
-            flee(1)
+            warp_and_hide(1)
         wait_for_cap()
         warp_to_ano()
         combat()
         return 1
     if get_filter_icon('all_ships.png'):
         print('player detected')
+        # todo: player handling ratting
         for i in range(3):
             combat_return(1)
         wait_warp()
@@ -323,14 +302,16 @@ def danger_handling_combat():
         return 1
     return 0
 def danger_handling_farming():
+    # todo player handling
     if get_filter_icon('all_ships.png'):
         print('player detected')
         for i in range(3):
-            flee(4)
+            warp_and_hide(4)
         wait_warp()
         warp_to_ano()
         combat()
         return 1
+    repair(100)
     return 0
 
 
@@ -338,6 +319,7 @@ def danger_handling_farming():
 def combat_start_from_station():
     undock_and_modules()
     set_pi_planet_for_autopilot(get_planet())
+    device_update_cs()
     activate_autopilot()
     wait_end_navigation(10)
     playsound(Path_to_script + 'assets\\sounds\\bell.wav')
@@ -348,119 +330,93 @@ def combat_start_from_system():
     warp_to_ano()
     combat()
 
-def combat_from_system():
-    return
 def loot():
     print('looting')
     # swap to container view
+    # init
+    if 1:
+        # turn on prop module
+        activate_the_modules('prop')
 
-    # turn on prop module
-    for module in ModuleList:
-        if module[1] == 'prop':
-            print('activating prop')
-            activate_module(module)
+        set_filter('PvE')
 
-    set_filter('PvE')
-    # scroll up
-    device_swipe_from_circle(1406, 132, 20, 110, 1)
+        # scroll up
+        filter_swipe(1)
 
-    # find and click wreck icon in filter bar
-    x, y, w, h = 1547, 86, 18, 445
-    wreck_icon = cv.imread('assets\\wreck.png')
-    crop_img = CS_cv[y:y + h, x:x + w]
-    result = cv.matchTemplate(crop_img, wreck_icon, cv.TM_CCORR_NORMED)
-    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    if max_val > 0.95:
-        device_click_circle(max_loc[0] + x + 5, max_loc[1] + y + 7, 15)
-        while 1:
-
-            # behavior
-            device_update_cs()
-            repair(100)
-            danger_handling_farming()
-            if get_npc_count():
+        # find and click wreck icon in filter bar
+        tmp = get_filter_icon('wreck')
+        if tmp == 0:
+            if get_cargo() > 90:
+                combat_return(0)
+            else:
+                warp_to_ano()
                 combat()
                 return
-
-            if get_cargo() > 95:
-                print('cargo full')
-                combat_return(0)
-                return
-
-            # still containers left?
-            crop_img = CS_cv[y:y + h, x:x + w]
-            result = cv.matchTemplate(crop_img, wreck_icon, cv.TM_CCORR_NORMED)
-            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-            if max_val > 0.95:
-                if work_on_container():
-                    return
-            else:
-                break
-    print('site done')
-    warp_to_ano()
-    combat()
-    return
-def combat():
-    print('combat')
-    tmp_lock = time.time()
-    tmp_weapon = time.time()
-    tmp_situational = time.time()
-    last_npc_count = 0
-
-    # maybe i shouldnt directly engage a potential enemy? it saves me like 6 secs every
-    # fight but seems akward, orbit is okay
-    target_action(1, 4)
+        x, y = tmp
+        device_click_circle(x, y, 10)
 
     while 1:
-        print('combat cycle')
-        if update_and_checkup_for_combat() == 1:
-            return
-        activate_filter_window()
-        current_npc_count = get_npc_count()
-        print(0)
-        # update targets
-        # todo: lock closer targets
-        if time.time() - tmp_lock > 0:
-            if 1:
-                # press_lock_button():
-                tmp_lock = time.time() + 7
-                tmp_weapon = time.time() + 10
+        # repair and check for players
+        danger_handling_farming()
 
-        # no enemies
-        if not current_npc_count:
-            time.sleep(2)
-            device_update_cs()
-            if not current_npc_count:
-                loot()
+        # check for rats respawn late
+        if get_npc_count() > 0:
+            combat()
+
+        if get_cargo() == 100:
+            print('cargo full')
+            combat_return(0)
+            return
+
+        tmp = get_filter_icon('wreck')
+        if tmp == 0:
+            if get_cargo() > 75:
+                combat_return(0)
+            else:
+                print('site done')
+                warp_to_ano()
+                combat()
                 return
-        if update_and_checkup_for_combat() == 1:
-            return
-        print(2)
-        # check if weapons are online
-        if time.time() - tmp_weapon > 0:
-            for module in ModuleList:
-                if module[1] == 'drone':
-                    # or weapon
-                    if activate_module(module):
-                        print('activating drone successful')
-                        tmp_weapon = time.time() + 10
+        work_on_container()
+def combat():
+    # todo: lock delay for no dmg split
+    print('combat')
+    set_filter('PvE')
+    tmp_weapon = time.time()
+    tmp_cd = time.time() + 30
+    while 1:
+        # check hp, cap and other players
+        device_update_cs()
+        danger_handling_combat()
 
-        print(3)
-        # activate standard modules, behavior
-        if current_npc_count != last_npc_count:
-            target_action(1, 4)
-            last_npc_count = current_npc_count
-            # todo react to close enemys, nos, web, etc
-        for module in ModuleList:
-            if module[1] == 'prop':
-                activate_module(module)
+        if get_is_locked(1):
+            # lock second one?
+            if get_is_locked(2) == 0 and get_tar_cross():
+                target_action(2, 1)
 
-        # activate dmg amplifiers, nos, web
-        if time.time() - tmp_situational > 90:
-            tmp_situational = time.time()
-            for module in ModuleList:
-                if module[1] == 'situational':
-                    activate_module(module)
+            # weapons
+            if tmp_weapon < time.time():
+                activate_the_modules('weapon')
+                if activate_the_modules('drone'):
+                    tmp_weapon = time.time() + 10
+
+            # cd items
+            if tmp_cd < time.time():
+                if activate_the_modules('cd'):
+                    tmp_cd = time.time() + 90
+                    # 0815 ewar
+                    activate_the_modules('ewar')
+
+            # todo: improve ewar?
+
+        else:
+            if get_tar_cross():
+                target_action(1, 1)
+            else:
+                loot()
+
+    # todo react to close enemys, nos, web, etc
+
 def combat_return(get_ganked):
     return
 
@@ -469,84 +425,12 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    set_filter('Ano')
-    # todo: so much todo
-    # click filter element to expand filter
-    device_click_filter_block()
-    time.sleep(1)
-    list_ano = []
-
-    device_update_cs()
-
-    # create a list of all anomaly locations (on screen)
-    x, y, w, h = 729, 51, 14, 475
-    print(Path_to_script + 'assets\\filter_icons\\ano_left.png')
-    img_ano = cv.imread(Path_to_script + 'assets\\filter_icons\\ano_left.png')
-
-    # show_image(img_ano, 1)
-    crop_img = get_cs_cv()[y:y + h, x:x + w]
-    crop_img = image_remove_dark(crop_img, 175)
-    # show_image(crop_img, 1)
-    result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
-    threshold = 0.8
-    loc = np.where(result >= threshold)
-    # black magic do not touch
-    previous_point_y = -10
-    for pt in zip(*loc[::-1]):
-        # ignore double results
-        if pt[1] > previous_point_y + 10:
-            previous_point_y = pt[1]
-            # add_rectangle(pt[0] + x, pt[1] + y, 0, 0)
-
-            # icon offset, size of text field
-            y_text, x_text = pt[1] - 12 + y, pt[0] + 65 + x
-            text_img = get_cs_cv()[y_text:y_text + 40, x_text:x_text + 120]
-            text_img = image_remove_dark(text_img, 250)
-            raw_text = tess.image_to_string(crop_img)
-
-            icon_img = text_img[5:15, 0:7]
-            # template gen
-            # remove darker pixels, seems to be a bad idea
-            # cv.imwrite('test.png', icon_img)
-
-
-            highest_result = 0
-            lvl = 0
-            for file in os.listdir(Path_to_script + 'assets\\base_level\\small\\'):
-                lvl_icon = cv.imread(Path_to_script + 'assets\\base_level\\small\\' + file)
-                result = cv.matchTemplate(icon_img, lvl_icon, cv.TM_CCORR_NORMED)
-                min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-                if highest_result < max_val:
-                    highest_result = max_val
-                    lvl = int(file[:-4])
-            print(lvl)
-            show_image(icon_img, 1)
-
-            if 'Scout' in raw_text or 'nquis' in raw_text:
-                print('found scout')
-                playsound(Path_to_script + 'assets\\sounds\\bell.wav')
-                device_click_filter_block()
-                save_screenshot()
-            else:
-                if 'Small' in raw_text:
-                    list_ano.append(['small', lvl, x_text, y_text])
-                else:
-                    if 'Medium' in raw_text:
-                        list_ano.append(['medium', lvl, x_text, y_text])
-                    else:
-                        if 'Large' in raw_text:
-                            list_ano.append(['large', lvl, x_text, y_text])
-                        else:
-                            if 'Base' in raw_text:
-                                print('ignore base')
-                                # list_ano.append(['base', lvl, pt[0], pt[1] - 28, pt[0] + 310, pt[1] + 53])
-
-    for ano in list_ano:
-        print(ano)
-    return list_ano
+    update_modules()
+    activate_the_modules('weapon')
+    # combat_start_from_system()
 
 read_config_file()
-read_config_file_uni()
+config_uni()
 if get_start() == 'main':
     main()
 if get_start() == 'custom':

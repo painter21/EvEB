@@ -761,3 +761,40 @@ def custom():
     # wait_end_navigation(6)
     calibrate()
     loot()
+
+    def get_npc_count():
+        # todo: test for 10+ enemys
+        set_filter('PvE')
+        x, y, w, h = 1547, 86, 18, 445
+        as_icon = cv.imread('assets\\enemy_npc.png')
+        crop_img = CS_cv[y:y + h, x:x + w]
+        result = cv.matchTemplate(crop_img, as_icon, cv.TM_CCORR_NORMED)
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        if max_val > 0.95:
+            y = max_loc[1] + y
+            x = max_loc[0] + 10 + x
+            h, w = 35, 25
+            crop_img = CS_cv[y:y + h, x:x + w]
+            blank_img = np.zeros((h, w * 2, 3), np.uint8)
+            line = 0
+            while line < h - 2:
+                row = 0
+                while row < w - 2:
+                    brightness = 0
+                    for color in crop_img[line][row]:
+                        brightness += color
+                        if brightness > 300:
+                            blank_img[line][row] = crop_img[line][row]
+                            blank_img[line][row + w - 10] = crop_img[line][row]
+                    row += 1
+                line += 1
+            raw_text = tess.image_to_string(blank_img).strip()
+            raw_text = re.sub('\D', '', raw_text)
+            tmp = 0
+            if int(len(raw_text)) == 0:
+                return 2
+            while tmp < int(len(raw_text) / 2):
+                raw_text = raw_text[:-1]
+                tmp += 1
+            return int(raw_text)
+        return 0
