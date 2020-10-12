@@ -19,59 +19,33 @@ def read_config_file():
 
 if 1:
     last_npc_icon_x, last_npc_icon_y = 0, 0
+    last_wallet_balance = 0
+    time_stamp_farming = time.time()
 
 # INTERNAL
-def farm_tracker(ano):
-    # t5med = 653k with frig in end
-    fri_six, des_six, cru_six = 19000, 19000, 90000
-    fri_five, des_five, cru_five = 15000, 20000, 53000
-    # see if there was a site done before and estimate the value gained / time
-    global last_farm_site, start_farm_time, last_inventory_value
-    if last_farm_site == 0 or interrupted_farming:
-        last_farm_site = ano
-        start_farm_time = time.time()
-        last_inventory_value = get_inventory_value_small_screen(0)
+def update_wallet_balance():
+    global last_wallet_balance
+    last_wallet_balance = get_wallet_balance()
+
+
+def farm_tracker(inv_value):
+    # should be opened in station
+    global last_wallet_balance
+    current_balance = get_wallet_balance()
+    print(last_wallet_balance)
+    if last_wallet_balance == 0:
+        last_wallet_balance = current_balance
         return
-    # i should not do it like that because it is just not transparent:
-    # updates inventory value and calculates the difference in one line
-    inventory_value = abs(last_inventory_value - (last_inventory_value := get_inventory_value_small_screen(0)))
 
-    bounty_value = 0
-    # ano bounties
-    if last_farm_site[1] == 6:
-        if last_farm_site[0] == 'large':
-            bounty_value += 6 * fri_six + 10 * des_six + 16 * cru_six
-        if last_farm_site[0] == 'medium':
-            bounty_value += 6 * fri_six + 8 * des_six + 11 * cru_six
-        if last_farm_site[0] == 'small':
-            bounty_value += 4 * fri_six + 3 * des_six + 3 * cru_six
-    if last_farm_site[1] == 5:
-        if last_farm_site[0] == 'large':
-            bounty_value += 12 * fri_five + 8 * des_five + 10 * cru_five
-        if last_farm_site[0] == 'medium':
-            bounty_value += 6 * fri_five + 8 * des_five + 11 * cru_five
-        if last_farm_site[0] == 'small':
-            bounty_value += 4 * fri_five + 3 * des_five + 3 * cru_five
+    value = current_balance - last_wallet_balance + inv_value
+    last_wallet_balance = current_balance
 
-    print('new inventory value:', last_inventory_value)
-    print('difference:', inventory_value)
-    print('bountys:', bounty_value)
-    print((inventory_value + bounty_value)/(time.time() - start_farm_time))
-
-    string = str(last_farm_site[1]) + last_farm_site[0] + '\n' + \
-             'Items:\t\t' + str(inventory_value) + '\n' + \
-             'Bountys:\t' + str(bounty_value) + '\n' + \
-             'Total:\t\t' + str(inventory_value + bounty_value) + '\n' + \
-             'Time:\t\t' + str(int(time.time() - start_farm_time)) + '\n' + \
-             str(int((inventory_value + bounty_value)/(time.time() - start_farm_time)*3600)) + ' ISK/h\n\n'
-
+    count = time.time()-time_stamp_farming
+    string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + \
+             '\n' + value + ' ISK\n' + str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
     absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
     absolutely_professional_database.write(string)
     absolutely_professional_database.close()
-
-    start_farm_time = time.time()
-    if ano != 0:
-        last_farm_site = ano
 def choose_anomaly():
     base_level = 0
     ano_list = get_list_anomaly()
@@ -129,15 +103,32 @@ def get_npc_count():
 
 
 # TASKS
-def warp_and_hide(maximus_dist):
-    # todo
-    set_filter('esc')
-    warp_randomly(maximus_dist, 1)
-    for module in ModuleList:
-        if module[1] == 'esc':
-            activate_module(module)
-        if module[1] == 'prop':
-            deactivate_module(module)
+def warp_and_hide(got_ganked):
+    # escape
+    escape_autopilot()
+
+    # set autopilot to other system if ganked, should be done during warp
+    toggle_planet()
+    set_pi_planet_for_autopilot(get_planet())
+
+    # wait, if re-gank, swap system
+    for i in range(150):
+        device_update_cs()
+        if get_filter_icon('all_ships.png'):
+            escape_autopilot()
+            set_home()
+            wait_end_navigation(5)
+            if get_filter_icon('all_ships.png'):
+                combat_return(1)
+            break
+        time.sleep(2)
+
+    # if clear, toggles back the planet, why should the bot leave the system if noone was dangerous
+    if got_ganked == 0:
+        toggle_planet()
+    set_pi_planet_for_autopilot(get_planet())
+    warp_to_ano()
+    combat()
 def get_list_anomaly():
     # todo: it is way too inaccurate
     # click filter element to expand filter
@@ -169,8 +160,8 @@ def get_list_anomaly():
 
             # icon offset, size of text field
             y_text, x_text = pt[1] - 12 + y, pt[0] + 65 + x
-            filter_list_nr = int((y_text - 40)/52)
-            if filter_list_nr > 0:
+            filter_list_nr = int((y_text + 12)/52)
+            if filter_list_nr > 1:
                 text_img = get_cs_cv()[y_text:y_text + 40, x_text:x_text + 120]
                 text_img = image_remove_dark(text_img, 200)
                 raw_text = tess.image_to_string(text_img)
@@ -282,27 +273,17 @@ def danger_handling_combat():
     # check hp
     repair(85)
     if get_hp()[2] < 90:
-        print('hull critical')
         combat_return(0)
         quit()
     if get_cap() < 10:
         print('capacitor critical')
-        for i in range(3):
-            warp_and_hide(1)
+        activate_autopilot()
         wait_for_cap()
         warp_to_ano()
         combat()
-        return 1
+        quit()
     if get_filter_icon('all_ships.png'):
-        print('player detected')
-        # todo: player handling ratting
-        activate_autopilot()
-        time.sleep(4)
-        activate_the_modules('esc')
-        time.sleep(5)
-        wait_warp()
-        warp_to_ano()
-        combat()
+        warp_and_hide(1)
         return 1
     return 0
 def danger_handling_farming():
@@ -327,6 +308,7 @@ def combat_start_from_station():
     device_update_cs()
     activate_autopilot()
     wait_end_navigation(10)
+    set_pi_planet_for_autopilot(get_planet())
     playsound(Path_to_script + 'assets\\sounds\\bell.wav')
     warp_to_ano()
     combat()
@@ -335,6 +317,7 @@ def combat_start_from_system():
     warp_to_ano()
     combat()
 
+# todo: loot border is on 10%
 def loot():
     device_update_cs()
     print('looting')
@@ -347,7 +330,7 @@ def loot():
         # find and click wreck icon in filter bar
         tmp = get_filter_icon('wreck')
         if tmp == 0:
-            if get_cargo() > 90:
+            if get_cargo() > 10:
                 combat_return(0)
             else:
                 warp_to_ano()
@@ -404,6 +387,7 @@ def combat():
             loot()
         if last_npc_count < tmp:
             target_action(1, 1)
+            target_action(1, 3)
             target_action(2, 1)
             time.sleep(1)
             device_update_cs()
@@ -436,16 +420,7 @@ def combat():
 
 def combat_return(got_ganked):
     # activate autopilot and run (maybe i got ganked?)
-    activate_autopilot()
-    if get_eco_mode():
-        device_toggle_eco_mode()
-    time.sleep(3)
-    for module in get_module_list():
-        if module[1] == 'esc':
-            activate_module(module)
-        if module[1] == 'prop':
-            deactivate_module(module)
-    device_click_rectangle(246, 269, 77, 73)
+    escape_autopilot()
     if got_ganked == 1:
         print('got ganked')
         ding_when_ganked()
@@ -467,8 +442,7 @@ def combat_return(got_ganked):
 
         print('arriving')
         # dump ressources
-        dump_items()
-        farm_tracker(got_ganked)
+        farm_tracker(dump_items())
         # repeat?
     if get_repeat() == 0:
         playsound(Path_to_script + 'assets\\sounds\\bell.wav')
@@ -481,11 +455,13 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    combat_start_from_system()
+    target_action(1, 4)
+    # combat_start_from_system()
     # combat_start_from_system()
 
 read_config_file()
 config_uni()
+farm_tracker(0)
 if get_start() == 'main':
     main()
 if get_start() == 'custom':

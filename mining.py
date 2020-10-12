@@ -156,7 +156,7 @@ def farm_tracker(got_ganked):
     global time_stamp_farming
     if not got_ganked:
         count = time.time()-time_stamp_farming
-        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + str(int(count/60)) + 'm ' + str(count - int(count/60)*60) + 's\n\n'
+        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
         absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
         absolutely_professional_database.write(string)
         absolutely_professional_database.close()
@@ -179,7 +179,7 @@ def mining_in_belt():
     device_update_cs()
 
     # check if time is up
-    if get_cargo() > 95:
+    if get_cargo() > 90:
         device_toggle_eco_mode()
         mining_return(0)
         return
@@ -228,15 +228,7 @@ def mining_in_belt():
     mining_in_belt()
 def mining_return(got_ganked):
     # activate autopilot and run (maybe i got ganked?)
-    activate_autopilot()
-    if get_eco_mode():
-        device_toggle_eco_mode()
-    time.sleep(3)
-    for module in get_module_list():
-        if module[1] == 'esc':
-            activate_module(module)
-        if module[1] == 'prop':
-            deactivate_module(module)
+    escape_autopilot()
     device_click_rectangle(246, 269, 77, 73)
     if got_ganked == 1:
         print('got ganked')

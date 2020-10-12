@@ -133,6 +133,9 @@ def set_path(pa):
 def set_path_to_script(pa):
     global path_to_script
     path_to_script = pa
+def toggle_planet():
+    global planet
+    planet = abs(planet - 1)
 
 # BASIC FUNCTIONS
 def calc_hp_pos():
@@ -376,6 +379,19 @@ def update_modules():
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
     print(str(len(ModuleList)) + ' Modules found')
+def get_wallet_balance():
+    device_click_rectangle(95, 60, 84, 28)
+    time.sleep(2)
+    device_update_cs()
+    x, y, w, h = 193, 118, 238, 27
+    crop_img = image_remove_dark(CS_cv[y:y + h, x:x + w], 180)
+    raw_text = tess.image_to_string(crop_img).strip()
+    raw_text = re.sub('\D', '', raw_text)
+    # click on close
+    device_click_circle(926, 30, 10)
+    return int(raw_text)
+
+
 def get_speed():
     tmp = 0
     stop = 0
@@ -469,7 +485,7 @@ def get_filter_icon(filter_name):
             # print(max_val)
             border = 0.99
             if filter_name == 'npc' or filter_name == 'wreck':
-                border = 0.94
+                border = 0.89
             if max_val > border:
                 # icon gen
                 # crop_img = CS_cv[y+max_loc[1]:y+max_loc[1] + 10, x+max_loc[0]:x+max_loc[0] + 6]
@@ -490,7 +506,7 @@ def get_is_locked(target):
                     abs(int(CS_cv[y + i][x][1]) - CS_cv[y + i][x][2]) > 4 or \
                     58 > CS_cv[y + i][x][0] or CS_cv[y + i][x][0] > 160:
                 pix_not_gray += 1
-        if pix_not_gray < 4:
+        if pix_not_gray < 5:
             return 1
         return 0
     outer_x, outer_y, inner_x, inner_y, hp_x, hp_y = 631, 16, 671, 22, 656, 50
@@ -549,9 +565,9 @@ def get_module_is_active(module):
     if compare_colors(CS_image[y][x], activate_blue) < 15:
         return 1
     return 0
-def get_inventory_value_small_screen(is_open):
+def get_inventory_value_small_screen(to_open):
     x, y, w, h = 327, 492, 180, 26
-    if is_open:
+    if to_open:
         # open inventory
         device_click_rectangle(5, 61, 83, 26)
         time.sleep(1.5)
@@ -561,7 +577,7 @@ def get_inventory_value_small_screen(is_open):
     # cv.waitKey()
     raw_text = tess.image_to_string(crop_img).strip()
     raw_text = re.sub('\D', '', raw_text)
-    if is_open:
+    if to_open:
         # click on close
         device_click_circle(926, 30, 10)
     print('current inventory value: ', int(raw_text))
@@ -611,7 +627,10 @@ def target_action(target_nbr, action_nbr):
     target_nbr -= 1
     action_nbr -= 1
     tar_x, tar_y, tar_off_x = 670, 38, -61
-    dd_x, dd_y, dd_off_y = 525, 80, 75
+    dd_x, dd_y, dd_off_y = 525, 78, 58
+    for i in range(5):
+        add_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * i, 170, 47)
+    show_image(0,0)
     device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
     device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
     return
@@ -685,6 +704,18 @@ def deactivate_module(module):
 
     if compare_colors(CS_image[y][x], activate_blue) < 15:
         device_click_circle(module[2], module[3], module_icon_radius)
+def escape_autopilot():
+    activate_autopilot()
+    if get_eco_mode():
+        device_toggle_eco_mode()
+    time.sleep(3)
+    repair(100)
+    for module in get_module_list():
+        if module[1] == 'esc':
+            activate_module(module)
+        if module[1] == 'prop':
+            deactivate_module(module)
+    device_click_rectangle(246, 269, 77, 73)
 
 
 # PLAIN SCRIPTS
@@ -692,7 +723,7 @@ def dump_items():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
     time.sleep(1.5)
-    dump_tail()
+    return dump_tail()
 def dump_ore():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
@@ -700,11 +731,12 @@ def dump_ore():
     # venture cargo
     device_click_rectangle(18, 393, 173, 41)
     time.sleep(1.5)
-    dump_tail()
+    return dump_tail()
 def dump_tail():
     # select all
     device_click_rectangle(701, 458, 68, 60)
     time.sleep(1)
+    value = get_inventory_value_small_screen(0)
     # move to
     device_click_rectangle(21, 80, 145, 56)
     time.sleep(0.3)
@@ -713,6 +745,8 @@ def dump_tail():
     time.sleep(5)
     # click on close
     device_click_circle(926, 30, 10)
+    print('inventory value:', value)
+    return value
 def set_home():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
@@ -799,14 +833,14 @@ def undock_and_modules():
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
     update_modules()
 def warp_to(target_nbr, distance, should_set_home):
-    target_nbr -= 1
+    target_nbr -=1
     action_nbr = 1
     tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
     dd_x, dd_off_y = 539, 57
     print('warp to site')
     device_click_filter_block()
     device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
-    device_swipe_from_circle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5), 25, distance, 0)
+    device_swipe_from_circle(dd_x + 50, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5) + 10 + dd_off_y * action_nbr, 25, distance, 2)
     # implementing catch?
     time.sleep(5)
     if should_set_home:
