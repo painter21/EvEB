@@ -255,7 +255,7 @@ def work_on_container():
 
         time.sleep(2)
 def warp_to_ano():
-    set_filter('Ano')
+    set_filter('Ano', 0)
     device_click_filter_block()
     time.sleep(2)
     anomaly = choose_anomaly()
@@ -264,7 +264,7 @@ def warp_to_ano():
     # sometimes the interface times out and i have to reopen it
     device_click_filter_block()
     warp_to(anomaly[2], preferredOrbit, 0)
-    set_filter('PvE')
+    set_filter('PvE', 1)
     time.sleep(3)
     time.sleep(7)
     wait_warp_maybe_run()

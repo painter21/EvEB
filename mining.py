@@ -100,7 +100,7 @@ def mine():
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
         time.sleep(6)
-    set_filter('inin')
+    set_filter('inin', 0)
     device_update_cs()
     tmp = get_filter_icon('asteroid')
     print('activating prop')
@@ -169,6 +169,8 @@ def mining_from_station():
     print('start:', datetime.datetime.utcnow()+datetime.timedelta(hours=2))
     undock_and_modules()
     mining_warp_to_random(get_random_warp())
+    while check_for_lock_on_police():
+        mining_warp_to_random(get_random_warp())
     mining_in_belt()
 def mining_warp_to_random(maximum):
     # just if something waits in site
@@ -262,7 +264,7 @@ def mining_return(got_ganked):
     mining_from_station()
     return
 def test_esc():
-    set_filter('ing')
+    set_filter('ing', 0)
     device_toggle_eco_mode()
     wait_and_watch_out(200)
     device_toggle_eco_mode()

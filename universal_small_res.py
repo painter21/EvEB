@@ -73,6 +73,7 @@ if 1:
     color_white = [255, 255, 255, 255]
     outer_autopilot_green = [46, 101, 122, 255]
     inner_autopilot_green = [155, 166, 158, 255]
+    confirm_green = [47, 94, 89, 255]
     undock_yellow = [174, 147, 40, 255]
 
     # to be changed by user / fixed
@@ -591,7 +592,7 @@ def interface_show_player():
 
 
 # INTERFACE HELPER FUNCTIONS
-def set_filter(string_in_name):
+def set_filter(string_in_name, force):
     print('swap filter')
     # swaps to a filter containing the given string
     if activate_filter_window():
@@ -604,7 +605,7 @@ def set_filter(string_in_name):
     # Filter Header, use the cv.imshow to see if it fits
     x, y, w, h, y_first_option, y_off = 767, 7, 74, 30, 75, 52
     crop_img = CS_image[y:y + h, x:x + w]
-    if string_in_name not in tess.image_to_string(crop_img):
+    if string_in_name not in tess.image_to_string(crop_img) or force:
         # TODO: improve
         device_click_rectangle(x, y, w, h)
         if string_in_name in 'Anomalies':
@@ -621,7 +622,7 @@ def set_filter(string_in_name):
             return
         else:
             print('todo swap filter')
-        set_filter(string_in_name)
+        set_filter(string_in_name, force)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
 def target_action(target_nbr, action_nbr):
@@ -717,6 +718,20 @@ def escape_autopilot():
         if module[1] == 'prop':
             deactivate_module(module)
     device_click_rectangle(246, 269, 77, 73)
+
+def check_for_lock_on_police():
+    x_a, y_a, x_b, y_b = 804, 408, 804, 387
+    # check if autopilot is online (2 pixels because safety)
+    if compare_colors(CS_image[y_a][x_a], confirm_green) < 15 and \
+            compare_colors(CS_image[y_b][x_b], confirm_green) < 15:
+        device_click_rectangle(623, 388, 150, 46)
+        set_home()
+        time.sleep(5)
+        device_click_circle(22, 116, 10)
+        time.sleep(25)
+        undock_and_modules()
+        return 1
+    return 0
 
 
 # PLAIN SCRIPTS
@@ -830,10 +845,13 @@ def undock_and_modules():
 
     # sometimes the speed meter gets broken, redock to fix
     device_update_cs()
+    # todo: maybe it smetimes takes way too long to undock?
+    update_modules()
     speed_x, speed_y = 460, 495
     print('speed-o-meter value: ', get_cs_cv()[speed_y][speed_x][2])
-    if get_cs_cv()[speed_y][speed_x][2] < 130:
+    if get_cs_cv()[speed_y][speed_x][2] < 130 or len(ModuleList) < 2:
         # re dock
+        time.sleep(10)
         set_home()
         time.sleep(5)
         device_click_circle(22, 116, 10)
@@ -843,7 +861,6 @@ def undock_and_modules():
 
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
-    update_modules()
 def warp_to(target_nbr, distance, should_set_home):
     target_nbr -=1
     action_nbr = 1
@@ -860,7 +877,7 @@ def warp_to(target_nbr, distance, should_set_home):
     else:
         wait_warp()
 def warp_randomly(item_nr, should_set_home):
-    set_filter('esc')
+    set_filter('esc', 1)
     time.sleep(2)
     print('warp to site', should_set_home)
     if item_nr == -1:
@@ -882,7 +899,7 @@ def warp_randomly(item_nr, should_set_home):
         device_update_cs()
         if get_autopilot() == 0:
             set_home()
-        set_filter('inin')
+        set_filter('inin', 1)
         return wait_warp_maybe_run()
     else:
         time.sleep(4)
