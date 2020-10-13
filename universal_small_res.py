@@ -379,17 +379,6 @@ def update_modules():
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
     print(str(len(ModuleList)) + ' Modules found')
-def get_wallet_balance():
-    device_click_rectangle(95, 60, 84, 28)
-    time.sleep(2)
-    device_update_cs()
-    x, y, w, h = 193, 118, 238, 27
-    crop_img = image_remove_dark(CS_cv[y:y + h, x:x + w], 180)
-    raw_text = tess.image_to_string(crop_img).strip()
-    raw_text = re.sub('\D', '', raw_text)
-    # click on close
-    device_click_circle(926, 30, 10)
-    return int(raw_text)
 
 
 def get_speed():
@@ -484,6 +473,8 @@ def get_filter_icon(filter_name):
             min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
             # print(max_val)
             border = 0.99
+            if ship == 'cruiser':
+                border = 0.97
             if filter_name == 'npc' or filter_name == 'wreck':
                 border = 0.89
             if max_val > border:
@@ -573,20 +564,33 @@ def get_inventory_value_small_screen(to_open):
         time.sleep(1.5)
         device_update_cs()
     crop_img = CS_cv[y:y + h, x:x + w]
-    # cv.imshow('.', crop_img)
-    # cv.waitKey()
-    raw_text = tess.image_to_string(crop_img).strip()
+    # show_image(crop_img, 1)
+    raw_text = '0' + str(tess.image_to_string(crop_img).strip())
     raw_text = re.sub('\D', '', raw_text)
     if to_open:
         # click on close
         device_click_circle(926, 30, 10)
     print('current inventory value: ', int(raw_text))
     return int(raw_text)
+def get_wallet_balance():
+    device_click_rectangle(95, 60, 84, 28)
+    time.sleep(2)
+    device_update_cs()
+    x, y, w, h = 193, 118, 238, 27
+    crop_img = image_remove_dark(CS_cv[y:y + h, x:x + w], 180)
+    raw_text = '0' + str(tess.image_to_string(crop_img).strip())
+    raw_text = re.sub('\D', '', raw_text)
+    # click on close
+    device_click_circle(926, 30, 10)
+    return int(raw_text)
 def interface_show_player():
     x, y, h, w = 66, 1, 87, 127
     crop_img = CS_cv[y:y + h, x:x + w]
     cv.imshow('tmp', crop_img)
     cv.waitKey()
+
+
+# INTERFACE HELPER FUNCTIONS
 def set_filter(string_in_name):
     print('swap filter')
     # swaps to a filter containing the given string
@@ -620,17 +624,11 @@ def set_filter(string_in_name):
         set_filter(string_in_name)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
-
-
-# INTERFACE HELPER FUNCTIONS
 def target_action(target_nbr, action_nbr):
     target_nbr -= 1
     action_nbr -= 1
     tar_x, tar_y, tar_off_x = 670, 38, -61
     dd_x, dd_y, dd_off_y = 525, 78, 58
-    for i in range(5):
-        add_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * i, 170, 47)
-    show_image(0,0)
     device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
     device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
     return
@@ -668,7 +666,10 @@ def wait_warp():
     if get_speed() > 15:
         wait_warp()
 
-def activate_autopilot():
+def activate_autopilot(force_click):
+    if force_click:
+        device_click_circle(22, 116, 10)
+        return
     if get_autopilot():
         if not get_autopilot_active():
             device_click_circle(22, 116, 10)
@@ -705,7 +706,7 @@ def deactivate_module(module):
     if compare_colors(CS_image[y][x], activate_blue) < 15:
         device_click_circle(module[2], module[3], module_icon_radius)
 def escape_autopilot():
-    activate_autopilot()
+    activate_autopilot(0)
     if get_eco_mode():
         device_toggle_eco_mode()
     time.sleep(3)
@@ -723,7 +724,7 @@ def dump_items():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
     time.sleep(1.5)
-    return dump_tail()
+    return int(dump_tail())
 def dump_ore():
     # open inventory
     device_click_rectangle(5, 61, 83, 26)
@@ -731,11 +732,22 @@ def dump_ore():
     # venture cargo
     device_click_rectangle(18, 393, 173, 41)
     time.sleep(1.5)
-    return dump_tail()
+    # select all
+    device_click_rectangle(701, 458, 68, 60)
+    time.sleep(1)
+    # move to
+    device_click_rectangle(21, 80, 145, 56)
+    time.sleep(0.3)
+    # item hangar
+    device_click_rectangle(294, 96, 194, 54)
+    time.sleep(5)
+    # click on close
+    device_click_circle(926, 30, 10)
 def dump_tail():
     # select all
     device_click_rectangle(701, 458, 68, 60)
     time.sleep(1)
+    device_update_cs()
     value = get_inventory_value_small_screen(0)
     # move to
     device_click_rectangle(21, 80, 145, 56)

@@ -42,7 +42,7 @@ def farm_tracker(inv_value):
 
     count = time.time()-time_stamp_farming
     string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + \
-             '\n' + value + ' ISK\n' + str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
+             '\n' + str(value/1000) + ' kISK\n' + str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
     absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
     absolutely_professional_database.write(string)
     absolutely_professional_database.close()
@@ -108,13 +108,14 @@ def warp_and_hide(got_ganked):
     escape_autopilot()
 
     # set autopilot to other system if ganked, should be done during warp
+    wait_end_navigation(1)
     toggle_planet()
     set_pi_planet_for_autopilot(get_planet())
 
     # wait, if re-gank, swap system
     for i in range(150):
         device_update_cs()
-        if get_filter_icon('all_ships.png'):
+        if get_filter_icon('all_ships'):
             escape_autopilot()
             set_home()
             wait_end_navigation(5)
@@ -266,7 +267,7 @@ def warp_to_ano():
     set_filter('PvE')
     time.sleep(3)
     time.sleep(7)
-    wait_warp()
+    wait_warp_maybe_run()
 
     # swap to PvE
 def danger_handling_combat():
@@ -277,24 +278,24 @@ def danger_handling_combat():
         quit()
     if get_cap() < 10:
         print('capacitor critical')
-        activate_autopilot()
+        activate_autopilot(0)
         wait_for_cap()
         warp_to_ano()
         combat()
         quit()
-    if get_filter_icon('all_ships.png'):
+    if get_filter_icon('all_ships'):
         warp_and_hide(1)
         return 1
     return 0
 def danger_handling_farming():
     # todo player handling
-    if get_filter_icon('all_ships.png'):
+    if get_filter_icon('all_ships'):
         print('player detected')
-        activate_autopilot()
+        activate_autopilot(0)
         time.sleep(4)
         activate_the_modules('esc')
         time.sleep(5)
-        wait_warp()
+        wait_warp_maybe_run()
         warp_to_ano()
         combat()
         return 1
@@ -303,17 +304,36 @@ def danger_handling_farming():
 
 # STATES
 def combat_start_from_station():
+    farm_tracker(0)
     undock_and_modules()
     set_pi_planet_for_autopilot(get_planet())
     device_update_cs()
-    activate_autopilot()
+    activate_autopilot(0)
     wait_end_navigation(10)
+
+    # sometimes te speed meter screws up
+    stop = 1
+    while stop:
+        speed_x, speed_y = 460, 495
+        print('speed-o-meter value: ', get_cs_cv()[speed_y][speed_x][2])
+        if get_cs_cv()[speed_y][speed_x][2] > 130:
+            stop = 0
+        else:
+            toggle_planet()
+            set_pi_planet_for_autopilot(get_planet())
+            activate_autopilot(0)
+            wait_end_navigation(10)
+
+    activate_filter_window()
     set_pi_planet_for_autopilot(get_planet())
-    playsound(Path_to_script + 'assets\\sounds\\bell.wav')
     warp_to_ano()
     combat()
 def combat_start_from_system():
     update_modules()
+    farm_tracker(0)
+    time.sleep(2)
+    set_pi_planet_for_autopilot(get_planet())
+    device_update_cs()
     warp_to_ano()
     combat()
 
@@ -356,7 +376,7 @@ def loot():
 
         tmp = get_filter_icon('wreck')
         if tmp == 0:
-            if get_cargo() > 75:
+            if get_cargo() > 10:
                 set_home()
                 combat_return(0)
             else:
@@ -421,6 +441,7 @@ def combat():
 def combat_return(got_ganked):
     # activate autopilot and run (maybe i got ganked?)
     escape_autopilot()
+    set_home()
     if got_ganked == 1:
         print('got ganked')
         ding_when_ganked()
@@ -440,6 +461,10 @@ def combat_return(got_ganked):
         # wait until autopilot gone
         wait_end_navigation(20)
 
+        # click on close
+        device_click_circle(926, 30, 10)
+        time.sleep(2)
+
         print('arriving')
         # dump ressources
         farm_tracker(dump_items())
@@ -455,13 +480,11 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    target_action(1, 4)
-    # combat_start_from_system()
-    # combat_start_from_system()
+    combat_start_from_system()
+
 
 read_config_file()
 config_uni()
-farm_tracker(0)
 if get_start() == 'main':
     main()
 if get_start() == 'custom':

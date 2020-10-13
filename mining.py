@@ -286,7 +286,7 @@ def mining_from_station_in_null():
     print('going to system')
     device_update_cs()
     # activate autopilot
-    activate_autopilot()
+    activate_autopilot(0)
     # wait until autopilot gone
     wait_end_navigation(20)
 

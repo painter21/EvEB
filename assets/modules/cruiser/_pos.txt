@@ -1,4 +1,4 @@
-stab stab 7 9
+stab esc 7 9
 afterburner prop 5 13
 rep rep 14 14
 web ewar 12 -5
