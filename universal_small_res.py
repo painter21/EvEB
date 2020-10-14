@@ -274,7 +274,7 @@ def get_autopilot():
     # check if autopilot is online (2 pixels because safety)
     if compare_colors(CS_image[y_a][x_a], outer_autopilot_green) < 10 and \
             compare_colors(CS_image[y_b][x_b], outer_autopilot_green) < 10:
-        print('\t\t\tautopilot(): ', 1)
+        print('\t\t\tget_autopilot(): ', 1)
         return 1
     print('\t\t\tget_autopilot(): ', 0)
     return 0
@@ -658,6 +658,26 @@ def filter_swipe(direction):
         return
     device_swipe_from_circle(822, 100, 20, 400, 1)
 # longer
+def catch_bad_eco_mode(expected_autopilot_status):
+    print('\t\tcatch_bad_eco_mode()', expected_autopilot_status)
+    # basically asks if the task is mining
+    if ship == 'frigate':
+        # tries to catch bad eco modes and returns the ship home
+        activate_autopilot(1)
+        time.sleep(2)
+        device_update_cs()
+        if get_autopilot_active() == expected_autopilot_status:
+            print(' got bad eco_mode')
+            set_eco_mode()
+            device_toggle_eco_mode()
+            set_home()
+            time.sleep(1)
+            device_update_cs()
+            activate_autopilot(0)
+            wait_end_navigation(20)
+            return 1
+        activate_autopilot(1)
+        return 0
 def device_toggle_eco_mode():
     global eco_mode
     eco_mode = 1 - eco_mode
@@ -798,6 +818,14 @@ def activate_the_modules(its_name):
             if activate_module(module):
                 tmp = 1
     return tmp
+def deactivate_the_modules(its_name):
+    print('\t\tdeactivate_modules()', its_name)
+    tmp = 0
+    for module in ModuleList:
+        if module[1] == its_name:
+            if deactivate_module(module):
+                tmp = 1
+    return tmp
 def deactivate_module(module):
     print('\t\tdeactivate_module()', module[0])
     activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
@@ -831,7 +859,7 @@ def set_filter(string_in_name, force):
             time.sleep(1)
             device_update_cs()
     # Filter Header, use the cv.imshow to see if it fits
-    x, y, w, h, y_first_option, y_off = 767, 7, 74, 30, 75, 52
+    x, y, w, h, y_first_option, y_off = 735, 7, 74, 30, 75, 52
     crop_img = CS_image[y:y + h, x:x + w]
     if string_in_name not in tess.image_to_string(crop_img) or force:
         # TODO: improve
@@ -844,6 +872,10 @@ def set_filter(string_in_name, force):
             return
         if string_in_name in 'esc':
             device_click_rectangle(731, 338, 180, 45)
+            device_update_cs()
+            if check_for_lock_on_police():
+                time.sleep(2)
+                device_click_rectangle(731, 338, 180, 45)
             return
         if string_in_name in 'Mining':
             device_click_rectangle(731, 286, 180, 45)
@@ -920,6 +952,7 @@ def wait_end_navigation(safety_time):
                 device_update_cs()
                 if not get_autopilot():
                     return 1
+        activate_autopilot(0)
         time.sleep(safety_time)
 # special stuff
 def check_for_lock_on_police():
@@ -929,11 +962,6 @@ def check_for_lock_on_police():
     if compare_colors(CS_image[y_a][x_a], confirm_green) < 15 and \
             compare_colors(CS_image[y_b][x_b], confirm_green) < 15:
         device_click_rectangle(623, 388, 150, 46)
-        set_home()
-        time.sleep(5)
-        device_click_circle(22, 116, 10)
-        time.sleep(25)
-        undock_and_modules()
         return 1
     return 0
 
@@ -973,7 +1001,8 @@ def undock_and_modules():
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
 # todo eco mode catch unstable
-def warp_in_system(target_nbr, distance, should_set_home):
+def warp_in_system(target_nbr, distance, should_set_home, desired_filter):
+    print('\twarp_in_system()', target_nbr, distance, should_set_home, desired_filter)
     # the filter has to be set correctly, list cannot be scrolled, no planets/ stations, eco must be off
     # returns : 0 fine: 1 found pirates, 2:
     if target_nbr > 5:
@@ -991,9 +1020,12 @@ def warp_in_system(target_nbr, distance, should_set_home):
         filter_action(target_nbr, 2, 2)
         filter_action(2, 2, 2)
 
+    set_filter(desired_filter, 1)
+
     time.sleep(2)
     return warp_wait_trouble_fix_extension(should_set_home)
 def warp_wait_trouble_fix_extension(should_set_home):
+    print('\twarp_wait_trouble_fix_extension()')
     # autopilot is active and warp is initiated, checking for safe landing and eco mode trouble, if autopilot set
     # ends when enemy player found 5 sec after start or when warp ends
     if get_autopilot() == 0:
@@ -1003,25 +1035,11 @@ def warp_wait_trouble_fix_extension(should_set_home):
         else:
             time.sleep(4)
     else:
-        # basically asks if the task is mining
-        if ship == 'frigate':
-            # tries to catch bad eco modes and returns the ship home
-            activate_autopilot(1)
-            time.sleep(1.5)
-            device_update_cs()
-            if get_autopilot_active() != 1:
-                print(' got bad eco_mode')
-                set_eco_mode()
-                device_toggle_eco_mode()
-                set_home()
-                time.sleep(1)
-                device_update_cs()
-                activate_autopilot(0)
-                wait_end_navigation(20)
-                return 2
-            activate_autopilot(1)
+        if catch_bad_eco_mode(0):
+            return 2
     return warp_wait()
 def warp_wait():
+    print('\t\twarp_wait()')
     while 1:
         # does nothing until speed bar goes to 15%
         device_update_cs()

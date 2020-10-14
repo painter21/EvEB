@@ -94,7 +94,8 @@ def get_good_asteroid_from_list(ast_list):
     if get_cargo() > 90:
         mining_return(0)
         quit()
-    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1)
+    set_filter('esc', 1)
+    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
     mining_in_belt()
     quit()
 
@@ -103,6 +104,8 @@ def mine():
     print(' mine')
     if get_eco_mode():
         device_toggle_eco_mode()
+
+    activate_the_modules('prop')
 
     # sometimes, ancient thing spawns, slow down
     loot_green = [48, 94, 87]
@@ -125,7 +128,7 @@ def mine():
         
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
-    wait_and_watch_out(6)
+        wait_and_watch_out(6)
     # catch
     if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
         device_click_circle(x, y, 15)
@@ -136,7 +139,8 @@ def mine():
     tmp = get_filter_icon('asteroid')
     activate_the_modules('prop')
     if tmp == 0:
-        warp_in_system(int(np.random.default_rng().random() * 2.99 + 2), 0, 1)
+        set_filter('esc', 0)
+        warp_in_system(int(np.random.default_rng().random() * 2.99 + 2), 0, 1, 'ining')
         mining_in_belt()
         quit()
     device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
@@ -203,11 +207,11 @@ def mining_from_station():
     undock_and_modules()
     activate_filter_window()
     time.sleep(1)
+
     set_filter('esc', 0)
+
     time.sleep(1)
-    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1)
-    while check_for_lock_on_police():
-        mining_from_station()
+    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
     mining_in_belt()
 # todo
 def mining_in_belt():
@@ -216,7 +220,7 @@ def mining_in_belt():
 
     # check if time is up
     if get_cargo() > 90:
-        device_toggle_eco_mode()
+        deactivate_the_modules('harvest')
         mining_return(0)
         return
 
@@ -275,8 +279,9 @@ def mining_return(got_ganked):
         print('got ganked')
         ding_when_ganked()
         save_screenshot()
-    time.sleep(2)
     device_update_cs()
+
+    catch_bad_eco_mode(1)
 
     print(' \tchecking if dead')
     if get_is_capsule() or get_is_in_station():
