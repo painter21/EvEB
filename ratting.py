@@ -23,24 +23,21 @@ if 1:
     time_stamp_farming = time.time()
 
 # INTERNAL
-def update_wallet_balance():
-    global last_wallet_balance
-    last_wallet_balance = get_wallet_balance()
-
-
 def farm_tracker(inv_value):
     # should be opened in station
-    global last_wallet_balance
+    global last_wallet_balance, time_stamp_farming
     current_balance = get_wallet_balance()
-    print(last_wallet_balance)
     if last_wallet_balance == 0:
         last_wallet_balance = current_balance
         return
 
+    print('wallet difference: ' + str(current_balance - last_wallet_balance))
+    print('inventory value: ' + str(inv_value))
     value = current_balance - last_wallet_balance + inv_value
     last_wallet_balance = current_balance
 
-    count = time.time()-time_stamp_farming
+    count = time.time() - time_stamp_farming
+    time_stamp_farming = time.time()
     string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + \
              '\n' + str(value/1000) + ' kISK\n' + str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
     absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
@@ -304,7 +301,6 @@ def danger_handling_farming():
 
 # STATES
 def combat_start_from_station():
-    farm_tracker(0)
     undock_and_modules()
     set_pi_planet_for_autopilot(get_planet())
     device_update_cs()
@@ -330,7 +326,6 @@ def combat_start_from_station():
     combat()
 def combat_start_from_system():
     update_modules()
-    farm_tracker(0)
     time.sleep(2)
     set_pi_planet_for_autopilot(get_planet())
     device_update_cs()
@@ -370,7 +365,6 @@ def loot():
 
         if get_cargo() == 100:
             print('cargo full')
-            set_home()
             combat_return(0)
             return
 
@@ -441,11 +435,12 @@ def combat():
 def combat_return(got_ganked):
     # activate autopilot and run (maybe i got ganked?)
     escape_autopilot()
-    set_home()
     if got_ganked == 1:
         print('got ganked')
         ding_when_ganked()
         save_screenshot()
+    set_home()
+    activate_autopilot(0)
     time.sleep(2)
 
     print('checking if dead')
@@ -480,11 +475,11 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    combat_start_from_system()
-
+    print(dump_items())
 
 read_config_file()
 config_uni()
+farm_tracker(0)
 if get_start() == 'main':
     main()
 if get_start() == 'custom':

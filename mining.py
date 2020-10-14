@@ -3,6 +3,7 @@ from universal_small_res import *
 
 Path_to_script = ''
 def read_config_file():
+    print('\tread_config_file()')
     file = open('config.txt')
     tmp = file.readline().strip()
     while tmp != '':
@@ -15,8 +16,11 @@ def read_config_file():
             set_path_to_script(Path_to_script)
         tmp = file.readline()
 
+start_time = time.time()
+
 # INTERFACE HELPER
 def image_read_asteroid(image1):
+    print('\t\timage_read_asteroid()')
     min_value = 10000
     best_match = ''
     for asteroid_file in os.listdir(Path_to_script + 'assets\\asteroids\\'):
@@ -27,6 +31,7 @@ def image_read_asteroid(image1):
             best_match = asteroid_file
     return best_match[:-4]
 def get_list_asteroid():
+    print('\tget_list_asteroid()')
     # swap_filter('ining')
     # click filter element to expand filter
     device_click_filter_block()
@@ -65,6 +70,7 @@ def get_list_asteroid():
     # cv.waitKey()
     return list_ast
 def get_good_asteroid_from_list(ast_list):
+    print('\tget_good_asteroid_from_list()')
     file = open(Path_to_script + 'assets\\ore_pref.txt')
     tmp = file.readline().strip()
     while tmp != '':
@@ -94,16 +100,34 @@ def get_good_asteroid_from_list(ast_list):
 
 # TASKS
 def mine():
+    print(' mine')
     if get_eco_mode():
         device_toggle_eco_mode()
-    # select some asteroid
+
+    # sometimes, ancient thing spawns, slow down
+    loot_green = [48, 94, 87]
+    x, y = 362, 457
+    tmp = get_filter_icon('wreck')
+    if tmp != 0:
+        device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
+        filter_action(1, 2, 5)
+
+        wait_and_watch_out(2)
+        if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+            device_click_circle(x, y, 15)
+        wait_and_watch_out(2)
+
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
-        time.sleep(6)
+    time.sleep(6)
+    # catch
+    if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+        device_click_circle(x, y, 15)
+
+    # select some asteroid
     set_filter('inin', 0)
     device_update_cs()
     tmp = get_filter_icon('asteroid')
-    print('activating prop')
     activate_the_modules('prop')
     if tmp == 0:
         mining_warp_to_random(-1)
@@ -113,28 +137,32 @@ def mine():
     device_update_cs()
     a_list = get_list_asteroid()
     asteroid = get_good_asteroid_from_list(a_list)
-    print('mining ', asteroid)
+    print(' mining ', asteroid[0])
 
     asteroid.pop(0)
 
     wait_and_watch_out(4)
     # click filter element to expand filter
-    device_click_rectangle(740, 46, 161, 269)
+    if asteroid[1] > 260:
+        device_click_filter_block()
     time.sleep(1)
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
     time.sleep(0.5)
     device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]), asteroid[2], asteroid[3])
 
     # click filter element to expand filter
-    device_click_rectangle(740, 46, 161, 269)
+    if asteroid[1] > 260:
+        device_click_filter_block()
     time.sleep(0.5)
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
     time.sleep(0.5)
     device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]) + 58, asteroid[2], asteroid[3])
 def wait_and_watch_out(sec):
+    print('\twait_and_watch_out')
     for i in range(int(sec/2)):
         device_update_cs()
         if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
+            activate_autopilot(1)
             if get_bait() == 1:
                 subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
                                  "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
@@ -144,13 +172,11 @@ def wait_and_watch_out(sec):
                 time.sleep(3)
                 mining_return(1)
                 quit()
-            if get_eco_mode():
-                device_toggle_eco_mode()
-            print('ganked')
             mining_return(1)
             quit()
         time.sleep(2)
 def farm_tracker(got_ganked):
+    print('\tfarm_tracker', got_ganked)
     # intended to be called when dumping cargo
     # t5med = 653k with frig in end
     global time_stamp_farming
@@ -166,18 +192,20 @@ def farm_tracker(got_ganked):
 
 # STATES
 def mining_from_station():
-    print('start:', datetime.datetime.utcnow()+datetime.timedelta(hours=2))
+    print('\tmining_from_station()')
     undock_and_modules()
     mining_warp_to_random(get_random_warp())
     while check_for_lock_on_police():
         mining_warp_to_random(get_random_warp())
     mining_in_belt()
+# todo
 def mining_warp_to_random(maximum):
     # just if something waits in site
     if warp_randomly(maximum, 1):
         mining_return(1)
         return
 def mining_in_belt():
+    print(' mining_in_belt()')
     device_update_cs()
 
     # check if time is up
@@ -229,17 +257,19 @@ def mining_in_belt():
     wait_and_watch_out(50)
     mining_in_belt()
 def mining_return(got_ganked):
+    print(' mining_return()')
     # activate autopilot and run (maybe i got ganked?)
     escape_autopilot()
+    # usually, it spam clicks esc modules, which creates a warning
     device_click_rectangle(246, 269, 77, 73)
     if got_ganked == 1:
         print('got ganked')
         ding_when_ganked()
         save_screenshot()
     time.sleep(2)
-
-    print('checking if dead')
     device_update_cs()
+
+    print(' \tchecking if dead')
     if get_is_capsule() or get_is_in_station():
         absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
         absolutely_professional_database.write(
@@ -253,7 +283,12 @@ def mining_return(got_ganked):
 
         print('arriving')
         # dump ressources
-        dump_ore()
+        global start_time
+        if start_time > time.time() + 10000:
+            start_time = time.time()
+            dump_both()
+        else:
+            dump_ore()
         farm_tracker(got_ganked)
         # repeat?
     if get_repeat() == 0:
@@ -261,6 +296,13 @@ def mining_return(got_ganked):
         quit()
     if got_ganked == 1:
         time.sleep(get_safety_time())
+
+    # catch
+    if get_is_in_station() == 0:
+        click_close_inv_window()
+    if get_is_in_station() == 0:
+        click_close_inv_window()
+
     mining_from_station()
     return
 def test_esc():
@@ -269,8 +311,10 @@ def test_esc():
     wait_and_watch_out(200)
     device_toggle_eco_mode()
     mining_return(0)
+    print(' test_esc()')
 
 def mining_from_station_in_null():
+    print(' mining_from_station_in_null()')
     # set destination
     set_pi_planet_for_autopilot(get_planet())
     # wait until autopilot gone
@@ -300,7 +344,15 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
+    # catch bad eco mode
+    activate_autopilot(1)
+    time.sleep(0.5)
     device_update_cs()
+    if get_autopilot_active() != 1:
+        set_eco_mode()
+        device_toggle_eco_mode()
+    activate_autopilot(1)
+
 
 read_config_file()
 config_uni()
