@@ -94,7 +94,7 @@ def get_good_asteroid_from_list(ast_list):
     if get_cargo() > 90:
         mining_return(0)
         quit()
-    mining_warp_to_random(-1)
+    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1)
     mining_in_belt()
     quit()
 
@@ -110,16 +110,22 @@ def mine():
     tmp = get_filter_icon('wreck')
     if tmp != 0:
         device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
+        wait_and_watch_out(2)
         filter_action(1, 2, 5)
 
-        wait_and_watch_out(2)
+        time.sleep(4)
+        device_update_cs()
         if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
             device_click_circle(x, y, 15)
-        wait_and_watch_out(2)
-
+        if get_speed() > 50:
+            device_click_circle(353, 454, 20)
+            wait_and_watch_out(14)
+        time.sleep(2)
+        device_update_cs()
+        
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
-    time.sleep(6)
+    wait_and_watch_out(6)
     # catch
     if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
         device_click_circle(x, y, 15)
@@ -130,7 +136,7 @@ def mine():
     tmp = get_filter_icon('asteroid')
     activate_the_modules('prop')
     if tmp == 0:
-        mining_warp_to_random(-1)
+        warp_in_system(int(np.random.default_rng().random() * 2.99 + 2), 0, 1)
         mining_in_belt()
         quit()
     device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
@@ -157,6 +163,7 @@ def mine():
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
     time.sleep(0.5)
     device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]) + 58, asteroid[2], asteroid[3])
+    wait_and_watch_out(4)
 def wait_and_watch_out(sec):
     print('\twait_and_watch_out')
     for i in range(int(sec/2)):
@@ -194,16 +201,15 @@ def farm_tracker(got_ganked):
 def mining_from_station():
     print('\tmining_from_station()')
     undock_and_modules()
-    mining_warp_to_random(get_random_warp())
+    activate_filter_window()
+    time.sleep(1)
+    set_filter('esc', 0)
+    time.sleep(1)
+    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1)
     while check_for_lock_on_police():
-        mining_warp_to_random(get_random_warp())
+        mining_from_station()
     mining_in_belt()
 # todo
-def mining_warp_to_random(maximum):
-    # just if something waits in site
-    if warp_randomly(maximum, 1):
-        mining_return(1)
-        return
 def mining_in_belt():
     print(' mining_in_belt()')
     device_update_cs()
@@ -231,6 +237,10 @@ def mining_in_belt():
                     miners_active = 0
                     stop = 1
     if not miners_active:
+        if get_cargo() > 75:
+            device_toggle_eco_mode()
+            mining_return(0)
+            return
         if get_is_locked(1):
             wait_and_watch_out(20)
             device_swipe_from_circle(435, 265, 250, 1, 0)
@@ -241,7 +251,6 @@ def mining_in_belt():
         wait_and_watch_out(4)
         print('searching for asteroid')
         mine()
-        wait_and_watch_out(16)
         mining_in_belt()
         return
     else:
@@ -254,7 +263,7 @@ def mining_in_belt():
             device_toggle_eco_mode()
             mining_in_belt()
             return
-    wait_and_watch_out(50)
+    wait_and_watch_out(25)
     mining_in_belt()
 def mining_return(got_ganked):
     print(' mining_return()')
@@ -344,14 +353,10 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    # catch bad eco mode
-    activate_autopilot(1)
-    time.sleep(0.5)
-    device_update_cs()
-    if get_autopilot_active() != 1:
-        set_eco_mode()
-        device_toggle_eco_mode()
-    activate_autopilot(1)
+    while 1:
+        device_update_cs()
+        print(get_cargo())
+        time.sleep(2)
 
 
 read_config_file()

@@ -16,6 +16,7 @@ def read_config_file():
             Path_to_script = tmp[1]
             set_path_to_script(Path_to_script)
         tmp = file.readline()
+    print('\tmining_from_station()')
 
 if 1:
     last_npc_icon_x, last_npc_icon_y = 0, 0
@@ -24,6 +25,7 @@ if 1:
 
 # INTERNAL
 def farm_tracker(inv_value):
+    print('\tfarm_tracker()')
     # should be opened in station
     global last_wallet_balance, time_stamp_farming
     current_balance = get_wallet_balance()
@@ -31,8 +33,8 @@ def farm_tracker(inv_value):
         last_wallet_balance = current_balance
         return
 
-    print('wallet difference: ' + str(current_balance - last_wallet_balance))
-    print('inventory value: ' + str(inv_value))
+    print('\t\twallet difference: ' + str(current_balance - last_wallet_balance))
+    print('\t\tinventory value: ' + str(inv_value))
     value = current_balance - last_wallet_balance + inv_value
     last_wallet_balance = current_balance
 
@@ -44,6 +46,7 @@ def farm_tracker(inv_value):
     absolutely_professional_database.write(string)
     absolutely_professional_database.close()
 def choose_anomaly():
+    print('\tchoose_anomaly()')
     base_level = 0
     ano_list = get_list_anomaly()
     new_ano_list = []
@@ -63,6 +66,7 @@ def choose_anomaly():
     # todo: should swap system
     return ano_list[0]
 def get_npc_icon_current_loc():
+    print('\t\tget_npc_icon_current_loc()')
     w = 5
     for off in range(3):
         pix_not_red = 0
@@ -75,6 +79,7 @@ def get_npc_icon_current_loc():
             return 1
     return 0
 def get_npc_count():
+    print('\t\tget_npc_count()')
     # only returns 0,1 correctly, more = 2
 
     # updates the location, if needed
@@ -101,6 +106,7 @@ def get_npc_count():
 
 # TASKS
 def warp_and_hide(got_ganked):
+    print('\twarp_and_hide()')
     # escape
     escape_autopilot()
 
@@ -128,6 +134,7 @@ def warp_and_hide(got_ganked):
     warp_to_ano()
     combat()
 def get_list_anomaly():
+    print('\t\tget_list_anomaly()')
     # todo: it is way too inaccurate
     # click filter element to expand filter
 
@@ -204,6 +211,7 @@ def get_list_anomaly():
         print(ano)
     return list_ano
 def wait_and_watch_out(sec):
+    print('\t\twait_and_watch_out()')
     for i in range(int(sec/2)):
         device_update_cs()
         if get_filter_icon('all_ships') != 0:
@@ -222,8 +230,8 @@ def wait_and_watch_out(sec):
             quit()
         time.sleep(2)
 def wait_for_cap():
+    print(' wait_for_cap()')
     activate_filter_window()
-    print('waiting for cap')
     for module in ModuleList:
         deactivate_module(module)
     while 1:
@@ -231,6 +239,7 @@ def wait_for_cap():
             return
         wait_and_watch_out(4)
 def work_on_container():
+    print('\twork_on_container()')
     loot_green = [48, 94, 87]
     waiting_time = time.time()
     filter_action(1, 2, 5)
@@ -252,6 +261,7 @@ def work_on_container():
 
         time.sleep(2)
 def warp_to_ano():
+    print(' warp_to_ano()')
     set_filter('Ano', 0)
     device_click_filter_block()
     time.sleep(2)
@@ -260,14 +270,15 @@ def warp_to_ano():
     print(anomaly)
     # sometimes the interface times out and i have to reopen it
     device_click_filter_block()
-    warp_to(anomaly[2], preferredOrbit, 0)
-    set_filter('PvE', 1)
-    time.sleep(3)
-    time.sleep(7)
-    wait_warp_maybe_run()
+    tmp = warp_in_system(anomaly[2], preferredOrbit, 0)
+    if tmp == 1:
+        warp_and_hide()
+    if tmp == 2:
+        escape_autopilot()
 
     # swap to PvE
 def danger_handling_combat():
+    print('\t\tdanger_handling_combat()')
     # check hp
     repair(85)
     if get_hp()[2] < 90:
@@ -285,14 +296,11 @@ def danger_handling_combat():
         return 1
     return 0
 def danger_handling_farming():
+    print('\t\tdanger_handling_farming()')
     # todo player handling
     if get_filter_icon('all_ships'):
         print('player detected')
-        activate_autopilot(0)
-        time.sleep(4)
-        activate_the_modules('esc')
-        time.sleep(5)
-        wait_warp_maybe_run()
+        escape_autopilot()
         warp_to_ano()
         combat()
         return 1
@@ -301,6 +309,7 @@ def danger_handling_farming():
 
 # STATES
 def combat_start_from_station():
+    print(' combat_start_from_station()')
     undock_and_modules()
     set_pi_planet_for_autopilot(get_planet())
     device_update_cs()
@@ -325,6 +334,7 @@ def combat_start_from_station():
     warp_to_ano()
     combat()
 def combat_start_from_system():
+    print(' combat_start_from_system()')
     update_modules()
     time.sleep(2)
     set_pi_planet_for_autopilot(get_planet())
@@ -334,8 +344,8 @@ def combat_start_from_system():
 
 # todo: loot border is on 10%
 def loot():
+    print(' loot()')
     device_update_cs()
-    print('looting')
     # swap to container view
     # init
     if 1:
@@ -380,8 +390,8 @@ def loot():
                 return
         work_on_container()
 def combat():
+    print(' combat()')
     # todo: lock delay for no dmg split
-    print('combat')
     # set_filter('PvE')
 
     activate_the_modules('prop')
@@ -401,7 +411,7 @@ def combat():
             loot()
         if last_npc_count < tmp:
             target_action(1, 1)
-            target_action(1, 3)
+            target_action(1, 4)
             target_action(2, 1)
             time.sleep(1)
             device_update_cs()
@@ -433,6 +443,7 @@ def combat():
     # todo react to close enemys, nos, web, etc
 
 def combat_return(got_ganked):
+    print(' combat_retur()')
     # activate autopilot and run (maybe i got ganked?)
     escape_autopilot()
     if got_ganked == 1:
@@ -475,7 +486,10 @@ def main():
     interface_show_player()
     combat_start_from_station()
 def custom():
-    print(dump_items())
+    time.sleep(3)
+    device_update_cs()
+    update_modules()
+    combat()
 
 read_config_file()
 config_uni()

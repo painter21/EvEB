@@ -1,8 +1,8 @@
 # only works on 960x540
+
 import re
 import subprocess
 import sys
-
 from ppadb.client import Client
 import time
 import numpy as np
@@ -263,8 +263,8 @@ def get_cargo():
     # cv.imshow('image', CS_cv)
     # cv.waitKey(0)
     # no contrast in there, have to work with colors:
-    cargo_yellow = [100, 100, 72, 255]
-    if compare_colors(CS_image[y][int(x + (steps * w))], cargo_yellow) < 13:
+    cargo_yellow = [52, 47, 26, 255]
+    if compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_yellow) < 10:
         print('\t\t\tget_cargo(): ', 100)
         return 100
     print('\t\t\tget_cargo(): ', 0)
@@ -334,28 +334,7 @@ def get_filter_icon(filter_name):
             border = 0.99
             if ship == 'cruiser':
                 border = 0.975
-            if filter_name == 'npc' or filter_name == 'wreck':
-                border = 0.89
-            print('\t\t\ticon, max, border: ', icon_file, max_val, border)
-            if max_val > border:
-                # icon gen
-                # crop_img = CS_cv[y+max_loc[1]:y+max_loc[1] + 10, x+max_loc[0]:x+max_loc[0] + 6]
-                # show_image(image_remove_dark(crop_img, 130), 1)
-                return max_loc[0] + x, max_loc[1] + y
-    return 0
-def get_filter_icon(filter_name):
-    print('\t\tget_filter_icon(): ', filter_name)
-    x, y, w, h = 932, 40, 5, 277
-    crop_img = CS_cv[y:y + h, x:x + w]
-    for icon_file in os.listdir(path_to_script + 'assets\\filter_icons\\'):
-        if filter_name in icon_file:
-            image2 = cv.imread(path_to_script + 'assets\\filter_icons\\' + icon_file)
-            result = cv.matchTemplate(crop_img, image2, cv.TM_CCORR_NORMED)
-            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-            border = 0.99
-            if ship == 'cruiser':
-                border = 0.975
-            if filter_name == 'npc' or filter_name == 'wreck':
+            if filter_name == 'npc':
                 border = 0.89
             print('\t\t\ticon, max, border: ', icon_file, max_val, border)
             if max_val > border:
@@ -915,39 +894,6 @@ def set_pi_planet_for_autopilot(target):
     # time.sleep(1)
     # device_click_circle(925, 30, 15)
     time.sleep(5)
-def warp_to(target_nbr, distance, should_set_home):
-    print('\t\twarp_to()', target_nbr)
-    target_nbr -= 1
-    action_nbr = 1
-    tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
-    dd_x, dd_off_y = 539, 57
-    print('warp to site')
-    device_click_filter_block()
-    device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
-    device_swipe_from_circle(dd_x + 50, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5) + 10 + dd_off_y * action_nbr, 25, distance, 2)
-    # implementing catch?
-    time.sleep(5)
-    if should_set_home:
-        wait_warp_maybe_run()
-    else:
-        wait_warp()
-def wait_warp():
-    print('\t\twait_warp()')
-    # does nothing until speed bar goes to 15%
-    device_update_cs()
-    if get_speed() > 15:
-        wait_warp()
-def wait_warp_maybe_run():
-    print('\t\twait_warp_maybe_run()')
-    # does nothing until speed bar goes to 15%
-    device_update_cs()
-    if get_autopilot() == 0:
-        set_home()
-    if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
-        return 1
-    if get_speed() > 15:
-        wait_warp_maybe_run()
-    return 0
 def escape_autopilot():
     print('\tescape_autopilot()')
     if get_eco_mode():
@@ -1027,43 +973,65 @@ def undock_and_modules():
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
 # todo eco mode catch unstable
-def warp_randomly(item_nr, should_set_home):
-    print('\t\twarp_randomly()', item_nr, should_set_home)
-    set_filter('esc', 1)
+def warp_in_system(target_nbr, distance, should_set_home):
+    # the filter has to be set correctly, list cannot be scrolled, no planets/ stations, eco must be off
+    # returns : 0 fine: 1 found pirates, 2:
+    if target_nbr > 5:
+        device_click_filter_block()
+
+    target_nbr -= 1
+    action_nbr = 11
+    tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
+    dd_x, dd_off_y = 539, 57
+
+    if distance != 0:
+        device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
+        device_swipe_from_circle(dd_x + 50, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5) + 10 + dd_off_y * action_nbr, 25, distance, 2)
+    else:
+        filter_action(target_nbr, 2, 2)
+        filter_action(2, 2, 2)
+
     time.sleep(2)
-    if item_nr == -1:
-        i = 2 + int((get_filter_list_size() - 1) * random.random())
-        filter_action(i, 2, 2)
-        time.sleep(1)
-        filter_action(1, 2, 2)
-    else:
-        i = 1 + int(get_filter_list_size() * random.random())
-        filter_action(i, 2, 2)
-        time.sleep(1)
-        filter_action(1, 2, 2)
-    if should_set_home:
-        device_update_cs()
-
-        to_wait = 0
-        if get_autopilot() == 0:
+    return warp_wait_trouble_fix_extension(should_set_home)
+def warp_wait_trouble_fix_extension(should_set_home):
+    # autopilot is active and warp is initiated, checking for safe landing and eco mode trouble, if autopilot set
+    # ends when enemy player found 5 sec after start or when warp ends
+    if get_autopilot() == 0:
+        if should_set_home:
             set_home()
-            to_wait = 1
-
-        # catch bad eco mode
-        activate_autopilot(1)
-        time.sleep(0.5)
-        device_update_cs()
-        if get_autopilot_active() != 1:
-            set_eco_mode()
-            device_toggle_eco_mode()
-        activate_autopilot(1)
-        if to_wait == 1:
-            time.sleep(2)
-
-        set_filter('inin', 1)
-        return wait_warp_maybe_run()
+            time.sleep(1)
+        else:
+            time.sleep(4)
     else:
-        time.sleep(4)
-        wait_warp()
-        return 0
+        # basically asks if the task is mining
+        if ship == 'frigate':
+            # tries to catch bad eco modes and returns the ship home
+            activate_autopilot(1)
+            time.sleep(1.5)
+            device_update_cs()
+            if get_autopilot_active() != 1:
+                print(' got bad eco_mode')
+                set_eco_mode()
+                device_toggle_eco_mode()
+                set_home()
+                time.sleep(1)
+                device_update_cs()
+                activate_autopilot(0)
+                wait_end_navigation(20)
+                return 2
+            activate_autopilot(1)
+    return warp_wait()
+def warp_wait():
+    while 1:
+        # does nothing until speed bar goes to 15%
+        device_update_cs()
+        if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
+            return 1
+        if get_speed() < 15:
+            return 0
+
+
+
+
+
 
