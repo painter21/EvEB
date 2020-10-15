@@ -247,13 +247,13 @@ def get_speed():
     print('\t\t\tget_speed():', 100)
     return 100
 def get_cargo():
-    steps = 20
+    steps = 40
     x, y, w = 3, 61, 85 / steps
     # 0.55 match, 0.69 no match
     old_color = CS_image[y][x]
     for i in range(steps):
         new_color = CS_image[y][int(x + (i * w))]
-        # cv.rectangle(CS_cv, (int(x + (i * w)), y), (int(x + (i * w)), y), color=(0, 255, i * 10), thickness=3, lineType=cv.LINE_4)
+        # cv.rectangle(CS_cv, (int(x + (i * w)), y), (int(x + (i * w)), y), color=(0, 255, i * 10), thickness=1, lineType=cv.LINE_4)
         # print(compare_colors(new_color, old_color), new_color)
         if compare_colors(new_color, old_color) > 9:
             result = int(100 * i / steps)

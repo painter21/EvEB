@@ -96,7 +96,7 @@ def get_good_asteroid_from_list(ast_list):
         tmp = file.readline().strip()
     if len(new_list) != 0:
         return new_list[int(np.random.default_rng().random() * len(new_list))]
-    if get_cargo() > 80:
+    if get_cargo() > 70:
         mining_return(0)
         quit()
     set_filter('esc', 1)
@@ -125,7 +125,7 @@ def get_best_asteroid_from_list(ast_list):
             if ast2[0] == tmp:
                 return ast2
         tmp = file.readline().strip()
-    if get_cargo() > 90:
+    if get_cargo() > 70:
         mining_return(0)
         quit()
     set_filter('esc', 1)
@@ -185,6 +185,13 @@ def mine():
     # click filter element to expand filter
     if asteroid[1] > 260:
         device_click_filter_block()
+
+    # catch for ancient remains
+    loot_green = [48, 94, 87]
+    x, y = 362, 457
+    if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+        device_click_circle(x, y, 15)
+
     time.sleep(1)
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
     time.sleep(0.5)
@@ -195,7 +202,7 @@ def mine():
         device_click_filter_block()
     time.sleep(0.5)
     device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
-    time.sleep(0.5)
+
     device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]) + 58, asteroid[2], asteroid[3])
     wait_and_watch_out(4)
 def wait_and_watch_out(sec):
@@ -260,16 +267,10 @@ def mining_in_belt():
     device_update_cs()
 
     # check if time is up
-    if get_cargo() > 90:
+    if get_cargo() == 100:
         deactivate_the_modules('harvest')
         mining_return(0)
         return
-
-    # catch for ancient remains
-    loot_green = [48, 94, 87]
-    x, y = 362, 457
-    if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
-        device_click_circle(x, y, 15)
 
     # check if mining equipment is busy/ easily activated
     # if not, deactivate eco_state and start mining
@@ -288,7 +289,7 @@ def mining_in_belt():
                     miners_active = 0
                     stop = 1
     if not miners_active:
-        if get_cargo() > 75:
+        if get_cargo() > 85:
             device_toggle_eco_mode()
             time.sleep(2)
             mining_return(0)
@@ -316,7 +317,7 @@ def mining_in_belt():
             device_toggle_eco_mode()
             mining_in_belt()
             return
-    wait_and_watch_out(25)
+    wait_and_watch_out(10)
     mining_in_belt()
 def mining_return(got_ganked):
     print(' mining_return()')
@@ -408,22 +409,9 @@ def main():
     mining_from_station()
 def custom():
     while 1:
-        x, y, w, h, y_first_option, y_off = 735, 7, 74, 30, 75, 52
-        device_click_rectangle(x, y, w, h)
-        time.sleep(1)
-    print('\tmining_from_station()')
-    undock_and_modules()
-    activate_filter_window()
-    time.sleep(1)
-
-    set_filter('esc', 0)
-
-    time.sleep(1)
-    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
-    while 1:
-        set_filter('esc', 0)
-        warp_in_system_handling(int(np.random.default_rng().random() * 2.99 + 2), 0, 1, 'ining')
-        wait_and_watch_out(6)
+        device_update_cs()
+        print(get_cargo())
+        time.sleep(5)
 
 
 read_config_file()
