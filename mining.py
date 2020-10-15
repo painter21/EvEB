@@ -16,7 +16,9 @@ def read_config_file():
             set_path_to_script(Path_to_script)
         tmp = file.readline()
 
-start_time = time.time()
+start_program_time = time.time()
+inv_dump_time = time.time()
+time_stamp_farming = time.time()
 
 # INTERFACE HELPER
 def image_read_asteroid(image1):
@@ -86,6 +88,38 @@ def get_good_asteroid_from_list(ast_list):
 
     file = open(Path_to_script + 'assets\\ore_pref.txt')
     tmp = file.readline().strip()
+    new_list = []
+    while tmp != '':
+        for ast2 in ast_list:
+            if ast2[0] == tmp:
+                new_list.append(ast2)
+        tmp = file.readline().strip()
+    if len(new_list) != 0:
+        return new_list[int(np.random.default_rng().random() * len(new_list))]
+    if get_cargo() > 80:
+        mining_return(0)
+        quit()
+    set_filter('esc', 1)
+    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    mining_in_belt()
+    quit()
+def get_best_asteroid_from_list(ast_list):
+    print('\tget_good_asteroid_from_list()')
+    file = open(Path_to_script + 'assets\\ore_pref.txt')
+    tmp = file.readline().strip()
+    while tmp != '':
+        for ast in ast_list:
+            if ast[0] == tmp:
+                return ast
+        tmp = file.readline().strip()
+
+    # swipe down
+    device_click_rectangle(740, 46, 161, 269)
+    device_swipe_from_circle(822, 493, 20, 400, 3)
+    ast_list = get_list_asteroid()
+
+    file = open(Path_to_script + 'assets\\ore_pref.txt')
+    tmp = file.readline().strip()
     while tmp != '':
         for ast2 in ast_list:
             if ast2[0] == tmp:
@@ -95,17 +129,13 @@ def get_good_asteroid_from_list(ast_list):
         mining_return(0)
         quit()
     set_filter('esc', 1)
-    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
     mining_in_belt()
     quit()
 
 # TASKS
 def mine():
     print(' mine')
-    if get_eco_mode():
-        device_toggle_eco_mode()
-
-    activate_the_modules('prop')
 
     # sometimes, ancient thing spawns, slow down
     loot_green = [48, 94, 87]
@@ -130,6 +160,7 @@ def mine():
         device_click_circle(353, 454, 20)
         wait_and_watch_out(6)
     # catch
+
     if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
         device_click_circle(x, y, 15)
 
@@ -137,10 +168,9 @@ def mine():
     set_filter('inin', 0)
     device_update_cs()
     tmp = get_filter_icon('asteroid')
-    activate_the_modules('prop')
     if tmp == 0:
         set_filter('esc', 0)
-        warp_in_system(int(np.random.default_rng().random() * 2.99 + 2), 0, 1, 'ining')
+        warp_in_system_handling(int(np.random.default_rng().random() * 2.99 + 2), 0, 1, 'ining')
         mining_in_belt()
         quit()
     device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
@@ -193,12 +223,23 @@ def farm_tracker(got_ganked):
     global time_stamp_farming
     if not got_ganked:
         count = time.time()-time_stamp_farming
-        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
+        total_time = time.time() - start_program_time
+        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + \
+                 str(int(total_time / 60)) + 'm ' + str(int(total_time - int(total_time / 60) * 60)) + 's\n' + \
+                 str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
         absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
         absolutely_professional_database.write(string)
         absolutely_professional_database.close()
 
     time_stamp_farming = time.time()
+def warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter):
+    tmp = warp_in_system(target_nbr, distance, should_set_home, desired_filter)
+    if tmp == 1:
+        mining_return(1)
+    if tmp == 2:
+        warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter)
+    # 0 is fine
+    activate_the_modules('prop')
 
 
 # STATES
@@ -211,7 +252,7 @@ def mining_from_station():
     set_filter('esc', 0)
 
     time.sleep(1)
-    warp_in_system(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
     mining_in_belt()
 # todo
 def mining_in_belt():
@@ -223,6 +264,12 @@ def mining_in_belt():
         deactivate_the_modules('harvest')
         mining_return(0)
         return
+
+    # catch for ancient remains
+    loot_green = [48, 94, 87]
+    x, y = 362, 457
+    if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+        device_click_circle(x, y, 15)
 
     # check if mining equipment is busy/ easily activated
     # if not, deactivate eco_state and start mining
@@ -243,6 +290,7 @@ def mining_in_belt():
     if not miners_active:
         if get_cargo() > 75:
             device_toggle_eco_mode()
+            time.sleep(2)
             mining_return(0)
             return
         if get_is_locked(1):
@@ -252,6 +300,7 @@ def mining_in_belt():
             return
         if get_eco_mode():
             device_toggle_eco_mode()
+            time.sleep(2)
         wait_and_watch_out(4)
         print('searching for asteroid')
         mine()
@@ -297,9 +346,9 @@ def mining_return(got_ganked):
 
         print('arriving')
         # dump ressources
-        global start_time
-        if start_time > time.time() + 10000:
-            start_time = time.time()
+        global inv_dump_time
+        if inv_dump_time > time.time() + 10000:
+            inv_dump_time = time.time()
             dump_both()
         else:
             dump_ore()
@@ -359,9 +408,22 @@ def main():
     mining_from_station()
 def custom():
     while 1:
-        device_update_cs()
-        print(get_cargo())
-        time.sleep(2)
+        x, y, w, h, y_first_option, y_off = 735, 7, 74, 30, 75, 52
+        device_click_rectangle(x, y, w, h)
+        time.sleep(1)
+    print('\tmining_from_station()')
+    undock_and_modules()
+    activate_filter_window()
+    time.sleep(1)
+
+    set_filter('esc', 0)
+
+    time.sleep(1)
+    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    while 1:
+        set_filter('esc', 0)
+        warp_in_system_handling(int(np.random.default_rng().random() * 2.99 + 2), 0, 1, 'ining')
+        wait_and_watch_out(6)
 
 
 read_config_file()

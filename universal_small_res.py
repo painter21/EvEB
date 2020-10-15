@@ -424,7 +424,7 @@ def get_module_is_active(module):
     if compare_colors(CS_image[y][x], activate_blue) < 15:
         print('\t\t\tget_module_is_active():', module[0], 1)
         return 1
-    print('\t\t\tget_module_is_active():', module[0], 1)
+    print('\t\t\tget_module_is_active():', module[0], 0)
     return 0
 # combined
 def get_inventory_value_small_screen(to_open):
@@ -659,12 +659,14 @@ def filter_swipe(direction):
     device_swipe_from_circle(822, 100, 20, 400, 1)
 # longer
 def catch_bad_eco_mode(expected_autopilot_status):
+    time.sleep(5)
+    return
     print('\t\tcatch_bad_eco_mode()', expected_autopilot_status)
     # basically asks if the task is mining
     if ship == 'frigate':
         # tries to catch bad eco modes and returns the ship home
         activate_autopilot(1)
-        time.sleep(2)
+        time.sleep(2.5)
         device_update_cs()
         if get_autopilot_active() == expected_autopilot_status:
             print(' got bad eco_mode')
@@ -799,6 +801,7 @@ def activate_autopilot(force_click):
         if not get_autopilot_active():
             device_click_circle(22, 116, 10)
             return
+# todo does sometimes get info window in eco mode
 def activate_module(module):
     print('\t\tactivate_module()', module[0])
     activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
@@ -852,8 +855,7 @@ def set_filter(string_in_name, force):
     print('\t\tset_filter() ', string_in_name, force)
     # swaps to a filter containing the given string
     if activate_filter_window():
-        time.sleep(1)
-        time.sleep(1)
+        time.sleep(2)
         device_update_cs()
         if activate_filter_window():
             time.sleep(1)
@@ -1037,6 +1039,7 @@ def warp_wait_trouble_fix_extension(should_set_home):
     else:
         if catch_bad_eco_mode(0):
             return 2
+    time.sleep(2)
     return warp_wait()
 def warp_wait():
     print('\t\twarp_wait()')
