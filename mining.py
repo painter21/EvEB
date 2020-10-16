@@ -1,5 +1,6 @@
 # only works on 960x540
 from universal_small_res import *
+from random import randint
 
 Path_to_script = ''
 def read_config_file():
@@ -100,7 +101,7 @@ def get_good_asteroid_from_list(ast_list):
         mining_return(0)
         quit()
     set_filter('esc', 1)
-    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
     mining_in_belt()
     quit()
 def get_best_asteroid_from_list(ast_list):
@@ -129,13 +130,15 @@ def get_best_asteroid_from_list(ast_list):
         mining_return(0)
         quit()
     set_filter('esc', 1)
-    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
     mining_in_belt()
     quit()
 
 # TASKS
 def mine():
     print(' mine')
+    if get_speed() > 50:
+        device_click_circle(353, 454, 20)
 
     # sometimes, ancient thing spawns, slow down
     loot_green = [48, 94, 87]
@@ -146,21 +149,18 @@ def mine():
         wait_and_watch_out(2)
         filter_action(1, 2, 5)
 
-        time.sleep(4)
+        wait_and_watch_out(30)
         device_update_cs()
         if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
             device_click_circle(x, y, 15)
-        if get_speed() > 50:
-            device_click_circle(353, 454, 20)
-            wait_and_watch_out(14)
-        time.sleep(2)
         device_update_cs()
-        
-    if get_speed() > 50:
-        device_click_circle(353, 454, 20)
-        wait_and_watch_out(6)
-    # catch
+        if get_speed() > 20:
+            device_click_circle(353, 454, 20)
 
+    wait_and_watch_out(8)
+
+    # catch
+    device_update_cs()
     if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
         device_click_circle(x, y, 15)
 
@@ -170,10 +170,11 @@ def mine():
     tmp = get_filter_icon('asteroid')
     if tmp == 0:
         set_filter('esc', 0)
-        warp_in_system_handling(int(np.random.default_rng().random() * 2.99 + 2), 0, 1, 'ining')
+        warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
         mining_in_belt()
         quit()
     device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
+    wait_and_watch_out(2)
     device_update_cs()
     a_list = get_list_asteroid()
     asteroid = get_good_asteroid_from_list(a_list)
@@ -259,7 +260,14 @@ def mining_from_station():
     set_filter('esc', 0)
 
     time.sleep(1)
-    warp_in_system_handling(int(np.random.default_rng().random() * 3.99 + 1), 0, 1, 'ining')
+    if get_name() == 'bronsen':
+        warp_in_system_handling(randint(1, 2), 0, 1, 'ining')
+    else:
+        if get_name() == 'kort':
+            warp_in_system_handling(3, 0, 1, 'ining')
+        else:
+            warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
+
     mining_in_belt()
 # todo
 def mining_in_belt():
@@ -267,7 +275,7 @@ def mining_in_belt():
     device_update_cs()
 
     # check if time is up
-    if get_cargo() == 100:
+    if get_cargo() > 95:
         deactivate_the_modules('harvest')
         mining_return(0)
         return
@@ -345,6 +353,10 @@ def mining_return(got_ganked):
         # wait until autopilot gone
         wait_end_navigation(20)
 
+        # catch notification window
+        if get_is_in_station() == 0:
+            click_close_inv_window()
+
         print('arriving')
         # dump ressources
         global inv_dump_time
@@ -352,7 +364,8 @@ def mining_return(got_ganked):
             inv_dump_time = time.time()
             dump_both()
         else:
-            dump_ore()
+            if get_cargo() > 10:
+                dump_ore()
         farm_tracker(got_ganked)
         # repeat?
     if get_repeat() == 0:
@@ -361,9 +374,6 @@ def mining_return(got_ganked):
     if got_ganked == 1:
         time.sleep(get_safety_time())
 
-    # catch
-    if get_is_in_station() == 0:
-        click_close_inv_window()
     if get_is_in_station() == 0:
         click_close_inv_window()
 
@@ -409,9 +419,8 @@ def main():
     mining_from_station()
 def custom():
     while 1:
-        device_update_cs()
-        print(get_cargo())
-        time.sleep(5)
+        print(randint(0,3))
+        time.sleep(0.3)
 
 
 read_config_file()

@@ -54,10 +54,10 @@ def read_config_file_uni():
         if tmp[0] == 'start':
             global start
             start = tmp[1]
-        if tmp[0] == 'ding_when_ganked':
-            global ding_when_ganked
+        if tmp[0] == 'ding':
+            global ding
             print('set ding when ganked to ', tmp[1])
-            ding_when_ganked = tmp[1]
+            ding = int(tmp[1])
         tmp = file.readline()
 
 # INIT GLOBAL VALUES
@@ -83,7 +83,7 @@ if 1:
     path_to_script = ''
     start = 'main'
     ship = 'frigate'
-    ding_when_ganked = 0
+    ding = 0
     preferredOrbit = 29
     planet = 0
     repeat = 0
@@ -247,16 +247,17 @@ def get_speed():
     print('\t\t\tget_speed():', 100)
     return 100
 def get_cargo():
-    steps = 40
+    steps = 33
     x, y, w = 3, 61, 85 / steps
     # 0.55 match, 0.69 no match
     old_color = CS_image[y][x]
     for i in range(steps):
+        i += 1
         new_color = CS_image[y][int(x + (i * w))]
         # cv.rectangle(CS_cv, (int(x + (i * w)), y), (int(x + (i * w)), y), color=(0, 255, i * 10), thickness=1, lineType=cv.LINE_4)
         # print(compare_colors(new_color, old_color), new_color)
         if compare_colors(new_color, old_color) > 9:
-            result = int(100 * i / steps)
+            result = int(100 * (i-1) / steps)
             print('\t\t\tget_cargo(): ', result)
             return result
         old_color = new_color
@@ -264,6 +265,7 @@ def get_cargo():
     # cv.waitKey(0)
     # no contrast in there, have to work with colors:
     cargo_yellow = [52, 47, 26, 255]
+    # print(CS_image[y][int(x + ((steps-1) * w))],  CS_image[y][int(x + (steps * w) + 7)], cargo_yellow, compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_yellow))
     if compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_yellow) < 10:
         print('\t\t\tget_cargo(): ', 100)
         return 100
@@ -480,7 +482,7 @@ def save_screenshot():
         h.write(CS)
 def ding_when_ganked():
     print('\t\tding_when_ganked() ', ding_when_ganked)
-    if ding_when_ganked == 1:
+    if ding == 1:
         playsound(path_to_script + 'assets\\sounds\\bell.wav')
 def interface_show_player():
     print('\t\tinterface_show_player')
@@ -637,6 +639,9 @@ def target_action(target_nbr, action_nbr):
     return
 def filter_action(target_nbr, action_nbr, expected_list_size):
     print('\t\t\tfilter_action()', target_nbr, action_nbr, expected_list_size)
+    if target_nbr < 1 or action_nbr < 1:
+        print('filter action needs 1 or higher')
+        quit()
     if target_nbr > 5:
         device_click_filter_block()
     target_nbr -= 1
@@ -680,9 +685,16 @@ def catch_bad_eco_mode(expected_autopilot_status):
             return 1
         activate_autopilot(1)
         return 0
+# todo
 def device_toggle_eco_mode():
     global eco_mode
     eco_mode = 1 - eco_mode
+    if eco_mode == 0:
+        ding_when_ganked()
+        print('HERE')
+        print('HERE')
+        print('HERE')
+        time.sleep(3)
     print('\t\ttoggle eco mode to: ', eco_mode)
     subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 def device_update_cs():
@@ -1010,12 +1022,12 @@ def warp_in_system(target_nbr, distance, should_set_home, desired_filter):
     if target_nbr > 5:
         device_click_filter_block()
 
-    target_nbr -= 1
-    action_nbr = 11
     tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
     dd_x, dd_off_y = 539, 57
 
     if distance != 0:
+        target_nbr -= 1
+        action_nbr = 1
         device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
         device_swipe_from_circle(dd_x + 50, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5) + 10 + dd_off_y * action_nbr, 25, distance, 2)
     else:
