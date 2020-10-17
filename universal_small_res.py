@@ -423,10 +423,12 @@ def get_module_is_active(module):
         return 0
     activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
+    # add_rectangle(x, y, 0, 0)
     if compare_colors(CS_image[y][x], activate_blue) < 15:
         print('\t\t\tget_module_is_active():', module[0], 1)
         return 1
     print('\t\t\tget_module_is_active():', module[0], 0)
+    # show_image(0, 0)
     return 0
 # combined
 def get_inventory_value_small_screen(to_open):
@@ -691,10 +693,6 @@ def device_toggle_eco_mode():
     eco_mode = 1 - eco_mode
     if eco_mode == 0:
         ding_when_ganked()
-        print('HERE')
-        print('HERE')
-        print('HERE')
-        time.sleep(3)
     print('\t\ttoggle eco mode to: ', eco_mode)
     subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 def device_update_cs():
@@ -947,11 +945,9 @@ def escape_autopilot():
     repair(100)
     time.sleep(1)
     activate_autopilot(0)
-    for module in get_module_list():
-        if module[1] == 'esc':
-            activate_module(module)
-        if module[1] == 'prop':
-            deactivate_module(module)
+    time.sleep(2)
+    deactivate_the_modules('prop')
+    activate_the_modules('esc')
     device_click_rectangle(246, 269, 77, 73)
 def wait_end_navigation(safety_time):
     print('\t\twait_end_navigation()')

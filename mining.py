@@ -180,30 +180,7 @@ def mine():
     print(' mine')
     if get_speed() > 50:
         device_click_circle(353, 454, 20)
-
-    # sometimes, ancient thing spawns, slow down
-    loot_green = [48, 94, 87]
-    x, y = 362, 457
-    tmp = get_filter_icon('wreck')
-    if tmp != 0:
-        device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
-        wait_and_watch_out(2)
-        filter_action(1, 2, 5)
-
-        wait_and_watch_out(30)
-        device_update_cs()
-        if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
-            device_click_circle(x, y, 15)
-        device_update_cs()
-        if get_speed() > 20:
-            device_click_circle(353, 454, 20)
-
-    wait_and_watch_out(8)
-
-    # catch
-    device_update_cs()
-    if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
-        device_click_circle(x, y, 15)
+        to_wait = 1
 
     # select some asteroid
     set_filter('inin', 0)
@@ -227,13 +204,13 @@ def mine():
 
     # asteroid = get_good_asteroid_from_list(a_list)
     new_list = get_multiple_good_asteroids(a_list)
-    to_lock = min(len(new_list), 3)
+    to_lock = min(len(new_list), 4)
     for i in range(to_lock):
         asteroid = new_list[i]
         print(' mining ', asteroid[0])
         asteroid.pop(0)
 
-        wait_and_watch_out(4)
+        wait_and_watch_out(0)
         # click filter element to expand filter
         if asteroid[1] > 260:
             device_click_filter_block()
@@ -245,10 +222,25 @@ def mine():
 
     # click filter element to expand filter
     target_action(1, 2)
-    wait_and_watch_out(4)
+    wait_and_watch_out(0)
 def wait_and_watch_out(sec):
     print('\twait_and_watch_out')
+    device_update_cs()
+    if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
+        activate_autopilot(1)
+        if get_bait() == 1:
+            subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+                             "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
+            playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+            print('trap card activated')
+            device_toggle_eco_mode()
+            time.sleep(3)
+            mining_return(1)
+            quit()
+        mining_return(1)
+        quit()
     for i in range(int(sec/2)):
+        time.sleep(2)
         device_update_cs()
         if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
             activate_autopilot(1)
@@ -263,7 +255,6 @@ def wait_and_watch_out(sec):
                 quit()
             mining_return(1)
             quit()
-        time.sleep(2)
 def farm_tracker(got_ganked):
     print('\tfarm_tracker', got_ganked)
     # intended to be called when dumping cargo
@@ -288,6 +279,32 @@ def warp_in_system_handling(target_nbr, distance, should_set_home, desired_filte
         warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter)
     # 0 is fine
     activate_the_modules('prop')
+def loot():
+    device_update_cs()
+    # sometimes, ancient thing spawns, slow down
+    loot_green = [48, 94, 87]
+    x, y = 362, 457
+    tmp = get_filter_icon('wreck')
+    if tmp == 0:
+        return
+    device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
+    wait_and_watch_out(2)
+
+    while tmp != 0:
+        filter_action(1, 2, 5)
+
+        not_stop = 1
+        catch_time = 0
+        while not_stop and catch_time < 30:
+            wait_and_watch_out(2)
+            device_update_cs()
+            catch_time += 2
+            if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+                device_click_circle(x, y, 15)
+                wait_and_watch_out(4)
+                not_stop = 0
+        device_update_cs()
+        tmp = get_filter_icon('wreck')
 
 
 # STATES
@@ -301,7 +318,7 @@ def mining_from_station():
 
     time.sleep(1)
     if get_name() == 'bronsen':
-        warp_in_system_handling(randint(1, 2), 0, 1, 'ining')
+        warp_in_system_handling(1, 0, 1, 'ining')
     else:
         if get_name() == 'kort':
             warp_in_system_handling(3, 0, 1, 'ining')
@@ -318,6 +335,10 @@ def mining_in_belt():
 
         # check if time is up
         if get_cargo() > 95:
+            if get_eco_mode():
+                device_toggle_eco_mode()
+                wait_and_watch_out(2)
+            loot()
             deactivate_the_modules('harvest')
             mining_return(0)
             return
@@ -329,19 +350,22 @@ def mining_in_belt():
         for module in get_module_list():
             if module[1] == 'harvest' and stop == 0:
                 if not get_module_is_active(module):
-                    activate_module(module)
-                    if get_eco_mode():
-                        wait_and_watch_out(8)
-                    else:
-                        wait_and_watch_out(2)
-                    device_update_cs()
+                    wait_and_watch_out(4)
                     if not get_module_is_active(module):
-                        miners_active = 0
-                        stop = 1
+                        activate_module(module)
+                        if get_eco_mode():
+                            wait_and_watch_out(8)
+                        else:
+                            wait_and_watch_out(2)
+                        device_update_cs()
+                        if not get_module_is_active(module):
+                            miners_active = 0
+                            stop = 1
         if not miners_active:
             if get_cargo() > 85:
                 device_toggle_eco_mode()
                 time.sleep(2)
+                loot()
                 mining_return(0)
                 return
             if get_is_locked(1) or get_is_locked(2):
@@ -351,8 +375,9 @@ def mining_in_belt():
             else:
                 if get_eco_mode():
                     device_toggle_eco_mode()
-                    time.sleep(2)
-                wait_and_watch_out(2)
+                    wait_and_watch_out(2)
+                loot()
+                wait_and_watch_out(0)
                 print('searching for asteroid')
                 mine()
         else:
@@ -455,9 +480,22 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
+    update_modules()
     while 1:
-        print(randint(0,3))
-        time.sleep(0.3)
+        for module in get_module_list():
+            if module[1] == 'harvest':
+                if not get_module_is_active(module):
+                    wait_and_watch_out(4)
+                    if not get_module_is_active(module):
+                        activate_module(module)
+                        if get_eco_mode():
+                            wait_and_watch_out(8)
+                        else:
+                            wait_and_watch_out(2)
+                        device_update_cs()
+                        if not get_module_is_active(module):
+                            print('stop')
+        wait_and_watch_out(4)
 
 
 read_config_file()

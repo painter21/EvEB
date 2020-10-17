@@ -1,11 +1,12 @@
+pyroxeres
+dark_ochre
+
 xcrokite
 xjaspet
 xhedbergite
 xbitot
 xarkonor
-pyroxeres
 xspoudmain
 xhermorphite
-dark_ochre
 xgneiss
 xmercoxit

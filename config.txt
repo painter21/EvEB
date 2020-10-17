@@ -8,3 +8,4 @@ mining_time 550
 name kort
 home 2
 bait 0
+ship cruiser
