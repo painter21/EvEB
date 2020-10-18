@@ -691,8 +691,8 @@ def catch_bad_eco_mode(expected_autopilot_status):
 def device_toggle_eco_mode():
     global eco_mode
     eco_mode = 1 - eco_mode
-    if eco_mode == 0:
-        ding_when_ganked()
+    # if eco_mode == 0:
+        # ding_when_ganked()
     print('\t\ttoggle eco mode to: ', eco_mode)
     subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 def device_update_cs():
