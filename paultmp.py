@@ -33,7 +33,7 @@ device_nr = 1
 name = ''
 home = 0
 bait = 0
-time_stamp_farming = time.time()
+time_farming = time.time()
 
 # connect to Bluestacks
 adb = Client(host='127.0.0.1', port=5037)

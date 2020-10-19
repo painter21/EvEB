@@ -21,7 +21,7 @@ def read_config_file():
 if 1:
     last_npc_icon_x, last_npc_icon_y = 0, 0
     last_wallet_balance = 0
-    time_stamp_farming = time.time()
+    time_farming = time.time()
 
 # INTERNAL
 def farm_tracker(inv_value):

@@ -60,6 +60,9 @@ def read_config_file_uni():
             ding = int(tmp[1])
         tmp = file.readline()
 
+
+COLOR_WHITE = [255, 255, 255, 255]
+
 # INIT GLOBAL VALUES
 if 1:
     # updated by functions
@@ -93,7 +96,7 @@ if 1:
     home = 0
     bait = 0
     random_warp = 1
-    time_stamp_farming = time.time()
+    time_farming = time.time()
     # connect to Bluestacks
     Adb = Client(host='127.0.0.1', port=5037)
     Devices = Adb.devices()
@@ -670,7 +673,7 @@ def catch_bad_eco_mode(expected_autopilot_status):
     return
     print('\t\tcatch_bad_eco_mode()', expected_autopilot_status)
     # basically asks if the task is mining
-    if ship == 'frigate':
+    if ship == 'dump': #'frigate':
         # tries to catch bad eco modes and returns the ship home
         activate_autopilot(1)
         time.sleep(2.5)
@@ -694,7 +697,7 @@ def device_toggle_eco_mode():
     # if eco_mode == 0:
         # ding_when_ganked()
     print('\t\ttoggle eco mode to: ', eco_mode)
-    subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
+    # subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 def device_update_cs():
     print('\t\t\tdevice_update_cs()')
     global CS_cv, CS, CS_image

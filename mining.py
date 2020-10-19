@@ -19,7 +19,8 @@ def read_config_file():
 
 start_program_time = time.time()
 inv_dump_time = time.time()
-time_stamp_farming = time.time()
+time_farming = time.time()
+total_cargo = 0
 
 # INTERFACE HELPER
 def image_read_asteroid(image1):
@@ -255,22 +256,28 @@ def wait_and_watch_out(sec):
                 quit()
             mining_return(1)
             quit()
-def farm_tracker(got_ganked):
-    print('\tfarm_tracker', got_ganked)
+def farm_tracker():
+    print('\tfarm_tracker')
     # intended to be called when dumping cargo
     # t5med = 653k with frig in end
-    global time_stamp_farming
-    if not got_ganked:
-        count = time.time()-time_stamp_farming
+    global time_farming
+    global total_cargo
+    if (cargo := get_cargo()) > 0:
+        if cargo*60 / (time.time() - time_farming) > 10:
+            print('farming_ something is off', cargo*60 / (time.time() - time_farming))
+            return
+        total_cargo += cargo
+        count = time.time() - time_farming
         total_time = time.time() - start_program_time
         string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + \
-                 str(int(total_time / 60)) + 'm ' + str(int(total_time - int(total_time / 60) * 60)) + 's\n' + \
-                 str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n\n'
+                 str(int(total_time / 3600)) + 'h ' + str(int((total_time - int(total_time / 3600)*3600) / 60)) + 'm ' + str(int(total_time - int(total_time / 60) * 60)) + 's;' + \
+                 str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n' + \
+                 str(cargo) + '% ' + str(total_cargo) + '%\n\n'
         absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
         absolutely_professional_database.write(string)
         absolutely_professional_database.close()
 
-    time_stamp_farming = time.time()
+    time_farming = time.time()
 def warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter):
     tmp = warp_in_system(target_nbr, distance, should_set_home, desired_filter)
     if tmp == 1:
@@ -316,8 +323,8 @@ def mining_from_station():
 
     set_filter('esc', 0)
 
-    time.sleep(1)
-    if get_name() == 'bronsen':
+    time.sleep(3)
+    if get_name() == 'bronson':
         warp_in_system_handling(1, 0, 1, 'ining')
     else:
         if get_name() == 'kort':
@@ -421,6 +428,7 @@ def mining_return(got_ganked):
 
         print('arriving')
         # dump ressources
+        farm_tracker()
         global inv_dump_time
         if inv_dump_time > time.time() + 10000:
             inv_dump_time = time.time()
@@ -428,7 +436,6 @@ def mining_return(got_ganked):
         else:
             if get_cargo() > 10:
                 dump_ore()
-        farm_tracker(got_ganked)
         # repeat?
     if get_repeat() == 0:
         playsound(Path_to_script + 'assets\\sounds\\bell.wav')
@@ -480,22 +487,7 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    update_modules()
-    while 1:
-        for module in get_module_list():
-            if module[1] == 'harvest':
-                if not get_module_is_active(module):
-                    wait_and_watch_out(4)
-                    if not get_module_is_active(module):
-                        activate_module(module)
-                        if get_eco_mode():
-                            wait_and_watch_out(8)
-                        else:
-                            wait_and_watch_out(2)
-                        device_update_cs()
-                        if not get_module_is_active(module):
-                            print('stop')
-        wait_and_watch_out(4)
+    return
 
 
 read_config_file()

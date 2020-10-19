@@ -1,5 +1,6 @@
 pyroxeres
 dark_ochre
+xhermorphite
 
 xcrokite
 xjaspet
@@ -7,6 +8,5 @@ xhedbergite
 xbitot
 xarkonor
 xspoudmain
-xhermorphite
 xgneiss
 xmercoxit
