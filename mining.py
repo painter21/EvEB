@@ -341,7 +341,7 @@ def mining_in_belt():
         device_update_cs()
 
         # check if time is up
-        if get_cargo() > 95:
+        if get_cargo() > 0:
             if get_eco_mode():
                 device_toggle_eco_mode()
                 wait_and_watch_out(2)
@@ -434,7 +434,7 @@ def mining_return(got_ganked):
             inv_dump_time = time.time()
             dump_both()
         else:
-            if get_cargo() > 10:
+            if get_cargo() > 0:
                 dump_ore()
         # repeat?
     if get_repeat() == 0:
@@ -487,8 +487,8 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    save_screenshot()
-    return
+    undock_and_modules()
+
 
 
 read_config_file()

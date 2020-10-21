@@ -906,6 +906,9 @@ def set_filter(string_in_name, force):
     # cv.imshow('.', crop_img)
     # cv.waitKey()
 # longer
+# todo:
+def reset():
+    quit()
 def set_home():
     print('\t\tset_home()')
     # open inventory
@@ -982,6 +985,41 @@ def check_for_lock_on_police():
         device_click_rectangle(623, 388, 150, 46)
         return 1
     return 0
+# with catch
+def undock():
+    # waits for screen to go black and waits for screen to get color again
+    # return: 0 all okay, 1: undock unsuccessful, black screen for eternity
+    print('\tundock')
+    device_click_rectangle(817, 165, 111, 26)
+    interrupt = 0
+    count = 0
+    while interrupt == 0 and count < 100:
+        time.sleep(0.5)
+        device_update_cs()
+        count += 1
+        if image_get_blur_brightness(45, 24) < 4:
+            interrupt = 1
+
+    if interrupt == 0:
+        print('undock waited for 50s to undock, something is not right')
+        return 1
+
+    interrupt = 0
+    count = 0
+    while interrupt == 0 and count < 100:
+        time.sleep(0.5)
+        device_update_cs()
+        count += 1
+        if image_get_blur_brightness(45, 24) > 5:
+            time.sleep(5)
+            interrupt = 1
+
+    if interrupt == 0:
+        print('undock waited for 50s to undock, something is not right')
+        return 1
+    return 0
+
+
 
 # COMBINED TASKS
 def undock_and_modules():
@@ -996,13 +1034,11 @@ def undock_and_modules():
         device_click_circle(818, 87, 10)
         time.sleep(2)
 
-    print('undocking')
-    device_click_rectangle(817, 165, 111, 26)
-    time.sleep(15)
+    if undock():
+        reset()
 
     # sometimes the speed meter gets broken, redock to fix
     device_update_cs()
-    # todo: maybe it smetimes takes way too long to undock?
     update_modules()
     speed_x, speed_y = 460, 495
     print('speed-o-meter value: ', get_cs_cv()[speed_y][speed_x][2])
