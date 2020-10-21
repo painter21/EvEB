@@ -59,6 +59,7 @@ def read_config_file_uni():
             print('set ding when ganked to ', tmp[1])
             ding = int(tmp[1])
         tmp = file.readline()
+    file.close()
 
 
 COLOR_WHITE = [255, 255, 255, 255]
@@ -184,6 +185,7 @@ def update_modules():
                     ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
                     # cv.circle(CS_cv, center, module_icon_radius, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
         tmp = file.readline()
+    file.close()
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
     print(str(len(ModuleList)) + ' Modules found')
@@ -322,6 +324,7 @@ def get_is_capsule():
                 tmp_module_list.append([tmp[0], tmp[1], center[0], center[1]])
                 # cv.circle(CS_cv, center, module_icon_radius, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
         tmp = file.readline()
+    file.close()
     if len(tmp_module_list) == 0:
         print('\t\t\tget_is_capsule(): ', 1)
         return 1
