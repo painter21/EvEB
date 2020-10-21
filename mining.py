@@ -487,6 +487,7 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
+    save_screenshot()
     return
 
 

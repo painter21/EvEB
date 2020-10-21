@@ -478,13 +478,18 @@ def show_image(image, add):
     else:
         cv.imshow('tmp', image)
     cv.waitKey()
-def save_screenshot():
+def save_screenshot(name_of_image=None):
     print('\t\tsave_screenshot')
-    import random
-    import string
-    file_name = 'z'.join(random.choice(string.ascii_lowercase) for i in range(6))
-    with open(file_name + '.png', 'wb') as h:
-        h.write(CS)
+    # import random
+    # import string
+    # file_name = 'z'.join(random.choice(string.ascii_lowercase) for i in range(6))
+    if name_of_image is None:
+        now = datetime.datetime.now()
+        with open('z' + str(now.hour) + '_' + str(now.minute) + '_' + str(now.second) + '.png', 'wb') as h:
+            h.write(CS)
+    else:
+        with open(name_of_image + '.png', 'wb') as h:
+            h.write(CS)
 def ding_when_ganked():
     print('\t\tding_when_ganked() ', ding_when_ganked)
     if ding == 1:
