@@ -726,7 +726,7 @@ def device_update_cs():
 def device_click_filter_block():
     print('\t\t\tdevice_click_filter_block()')
     device_click_rectangle(740, 46, 161, 269)
-def click_close_inv_window():
+def close_pop_ups():
     print('\t\t\tclick_close_for_full_window()')
     # click on close
     device_click_circle(926, 30, 10)

@@ -102,6 +102,127 @@ def get_list_asteroid():
     # cv.waitKey()
     return list_ast
 # TASKS
+def wait_and_watch_out(sec=0):
+    print('\twait_and_watch_out')
+    device_update_cs()
+    if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
+        activate_autopilot(1)
+        if get_bait() == 1:
+            subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+                             "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
+            playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+            print('trap card activated')
+            device_toggle_eco_mode()
+            time.sleep(3)
+            mining_return(1)
+            quit()
+        mining_return(1)
+        quit()
+    for i in range(int(sec/2)):
+        time.sleep(2)
+        device_update_cs()
+        if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
+            activate_autopilot(1)
+            if get_bait() == 1:
+                subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+                                 "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
+                playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+                print('trap card activated')
+                device_toggle_eco_mode()
+                time.sleep(3)
+                mining_return(1)
+                quit()
+            mining_return(1)
+            quit()
+def farm_tracker():
+    print('\tfarm_tracker')
+    # intended to be called when dumping cargo
+    # t5med = 653k with frig in end
+    global time_farming
+    global total_cargo
+    if (cargo := get_cargo()) > 0:
+        if cargo*60 / (time.time() - time_farming) > 10:
+            print('farming_ something is off', cargo*60 / (time.time() - time_farming))
+            return
+        total_cargo += cargo
+        count = time.time() - time_farming
+        total_time = time.time() - start_program_time
+        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + \
+                 str(int(total_time / 3600)) + 'h ' + str(int((total_time - int(total_time / 3600)*3600) / 60)) + 'm ' + str(int(total_time - int(total_time / 60) * 60)) + 's;' + \
+                 str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n' + \
+                 str(cargo) + '% ' + str(total_cargo) + '%\n\n'
+        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+        absolutely_professional_database.write(string)
+        absolutely_professional_database.close()
+
+    time_farming = time.time()
+def warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter):
+    tmp = warp_in_system(target_nbr, distance, should_set_home, desired_filter)
+    if tmp == 1:
+        mining_return(1)
+    if tmp == 2:
+        warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter)
+    # 0 is fine
+def loot():
+    device_update_cs()
+    # sometimes, ancient thing spawns, slow down
+    loot_green = [48, 94, 87]
+    x, y = 362, 457
+    tmp = get_filter_icon('wreck')
+    if tmp == 0:
+        return
+    device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
+    wait_and_watch_out(2)
+
+    while tmp != 0:
+        filter_action(1, 2, 5)
+
+        not_stop = 1
+        catch_time = 0
+        while not_stop and catch_time < 30:
+            wait_and_watch_out(2)
+            device_update_cs()
+            catch_time += 2
+            if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
+                device_click_circle(x, y, 15)
+                wait_and_watch_out(4)
+                not_stop = 0
+        device_update_cs()
+        tmp = get_filter_icon('wreck')
+
+
+# STATES
+def mining_from_station():
+    print('\tmining_from_station()')
+    undock_and_modules()
+    activate_filter_window()
+    time.sleep(1)
+
+    set_filter('esc', 0)
+
+    time.sleep(3)
+    if get_name() == 'bronson':
+        warp_in_system_handling(1, 0, 1, 'ining')
+    else:
+        if get_name() == 'kort':
+            warp_in_system_handling(3, 0, 1, 'ining')
+        else:
+            warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
+
+    while mine():
+        set_filter('esc', 0)
+
+        time.sleep(3)
+        if get_name() == 'bronson':
+            warp_in_system_handling(1, 0, 1, 'ining')
+        else:
+            if get_name() == 'kort':
+                warp_in_system_handling(3, 0, 1, 'ining')
+            else:
+                warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
+
+    belt_handling()
+    mining_return(0)
 def mine():
     # returns 0: everything all right, 1: asteroid belt empty, not in asteroid belt
     print('\tlock_multiple_good_asteroids()')
@@ -225,127 +346,6 @@ def mine():
                 tmp = file.readline().strip()
             file.close()
         return 0
-def wait_and_watch_out(sec=0):
-    print('\twait_and_watch_out')
-    device_update_cs()
-    if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
-        activate_autopilot(1)
-        if get_bait() == 1:
-            subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
-                             "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
-            playsound(Path_to_script + 'assets\\sounds\\bell.wav')
-            print('trap card activated')
-            device_toggle_eco_mode()
-            time.sleep(3)
-            mining_return(1)
-            quit()
-        mining_return(1)
-        quit()
-    for i in range(int(sec/2)):
-        time.sleep(2)
-        device_update_cs()
-        if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
-            activate_autopilot(1)
-            if get_bait() == 1:
-                subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
-                                 "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
-                playsound(Path_to_script + 'assets\\sounds\\bell.wav')
-                print('trap card activated')
-                device_toggle_eco_mode()
-                time.sleep(3)
-                mining_return(1)
-                quit()
-            mining_return(1)
-            quit()
-def farm_tracker():
-    print('\tfarm_tracker')
-    # intended to be called when dumping cargo
-    # t5med = 653k with frig in end
-    global time_farming
-    global total_cargo
-    if (cargo := get_cargo()) > 0:
-        if cargo*60 / (time.time() - time_farming) > 10:
-            print('farming_ something is off', cargo*60 / (time.time() - time_farming))
-            return
-        total_cargo += cargo
-        count = time.time() - time_farming
-        total_time = time.time() - start_program_time
-        string = get_name() + ': ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + '\n' + \
-                 str(int(total_time / 3600)) + 'h ' + str(int((total_time - int(total_time / 3600)*3600) / 60)) + 'm ' + str(int(total_time - int(total_time / 60) * 60)) + 's;' + \
-                 str(int(count/60)) + 'm ' + str(int(count - int(count/60)*60)) + 's\n' + \
-                 str(cargo) + '% ' + str(total_cargo) + '%\n\n'
-        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
-        absolutely_professional_database.write(string)
-        absolutely_professional_database.close()
-
-    time_farming = time.time()
-def warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter):
-    tmp = warp_in_system(target_nbr, distance, should_set_home, desired_filter)
-    if tmp == 1:
-        mining_return(1)
-    if tmp == 2:
-        warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter)
-    # 0 is fine
-def loot():
-    device_update_cs()
-    # sometimes, ancient thing spawns, slow down
-    loot_green = [48, 94, 87]
-    x, y = 362, 457
-    tmp = get_filter_icon('wreck')
-    if tmp == 0:
-        return
-    device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
-    wait_and_watch_out(2)
-
-    while tmp != 0:
-        filter_action(1, 2, 5)
-
-        not_stop = 1
-        catch_time = 0
-        while not_stop and catch_time < 30:
-            wait_and_watch_out(2)
-            device_update_cs()
-            catch_time += 2
-            if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
-                device_click_circle(x, y, 15)
-                wait_and_watch_out(4)
-                not_stop = 0
-        device_update_cs()
-        tmp = get_filter_icon('wreck')
-
-
-# STATES
-def mining_from_station():
-    print('\tmining_from_station()')
-    undock_and_modules()
-    activate_filter_window()
-    time.sleep(1)
-
-    set_filter('esc', 0)
-
-    time.sleep(3)
-    if get_name() == 'bronson':
-        warp_in_system_handling(1, 0, 1, 'ining')
-    else:
-        if get_name() == 'kort':
-            warp_in_system_handling(3, 0, 1, 'ining')
-        else:
-            warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
-
-    while mine():
-        set_filter('esc', 0)
-
-        time.sleep(3)
-        if get_name() == 'bronson':
-            warp_in_system_handling(1, 0, 1, 'ining')
-        else:
-            if get_name() == 'kort':
-                warp_in_system_handling(3, 0, 1, 'ining')
-            else:
-                warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
-
-    belt_handling()
-    mining_return(0)
 # todo
 def belt_handling():
     timer_for_new_asteroid = time.time()
@@ -354,7 +354,7 @@ def belt_handling():
         wait_and_watch_out()
 
         # check if time is up
-        if get_cargo() > 95:
+        if get_cargo() > 95 or time.time() - time_farming > 30 * 60.:
             loot()
             deactivate_the_modules('harvest')
             return
@@ -414,7 +414,7 @@ def mining_return(got_ganked):
 
         # catch notification window
         if get_is_in_station() == 0:
-            click_close_inv_window()
+            close_pop_ups()
 
         print('arriving')
         # dump ressources
@@ -434,7 +434,7 @@ def mining_return(got_ganked):
         time.sleep(get_safety_time())
 
     if get_is_in_station() == 0:
-        click_close_inv_window()
+        close_pop_ups()
 
     mining_from_station()
 def test_esc():
@@ -477,8 +477,6 @@ def main():
     mining_from_station()
 def custom():
     return
-
-
 
 read_config_file()
 config_uni()
