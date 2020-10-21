@@ -798,3 +798,71 @@ def custom():
                 tmp += 1
             return int(raw_text)
         return 0
+
+    def get_good_asteroid_from_list(ast_list):
+        print('\tget_good_asteroid_from_list()')
+        file = open(Path_to_script + 'assets\\ore_pref.txt')
+        tmp = file.readline().strip()
+        new_list = []
+        while tmp != '':
+            for ast2 in ast_list:
+                if ast2[0] == tmp:
+                    new_list.append(ast2)
+            tmp = file.readline().strip()
+        if len(new_list) != 0:
+            return new_list[int(np.random.default_rng().random() * len(new_list))]
+
+        # swipe down
+        device_click_rectangle(740, 46, 161, 269)
+        device_swipe_from_circle(822, 493, 20, 400, 3)
+        ast_list = get_list_asteroid()
+
+        file = open(Path_to_script + 'assets\\ore_pref.txt')
+        tmp = file.readline().strip()
+        new_list = []
+        while tmp != '':
+            for ast2 in ast_list:
+                if ast2[0] == tmp:
+                    new_list.append(ast2)
+            tmp = file.readline().strip()
+        if len(new_list) != 0:
+            return new_list[int(np.random.default_rng().random() * len(new_list))]
+
+        # nothing in belt
+        if get_cargo() > 70:
+            mining_return(0)
+            quit()
+        set_filter('esc', 1)
+        warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
+        belt_handling()
+        quit()
+
+    def get_best_asteroid_from_list(ast_list):
+        print('\tget_good_asteroid_from_list()')
+        file = open(Path_to_script + 'assets\\ore_pref.txt')
+        tmp = file.readline().strip()
+        while tmp != '':
+            for ast in ast_list:
+                if ast[0] == tmp:
+                    return ast
+            tmp = file.readline().strip()
+
+        # swipe down
+        device_click_rectangle(740, 46, 161, 269)
+        device_swipe_from_circle(822, 493, 20, 400, 3)
+        ast_list = get_list_asteroid()
+
+        file = open(Path_to_script + 'assets\\ore_pref.txt')
+        tmp = file.readline().strip()
+        while tmp != '':
+            for ast2 in ast_list:
+                if ast2[0] == tmp:
+                    return ast2
+            tmp = file.readline().strip()
+        if get_cargo() > 70:
+            mining_return(0)
+            quit()
+        set_filter('esc', 1)
+        warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
+        belt_handling()
+        quit()

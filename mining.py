@@ -16,6 +16,7 @@ def read_config_file():
             Path_to_script = (tmp[1])
             set_path_to_script(Path_to_script)
         tmp = file.readline()
+    file.close()
 
 start_program_time = time.time()
 inv_dump_time = time.time()
@@ -23,6 +24,31 @@ time_farming = time.time()
 total_cargo = 0
 
 # INTERFACE HELPER
+def lock_asteroid(ast2):
+    if ast2[1] > 260:
+        device_click_filter_block()
+        time.sleep(1)
+    device_click_rectangle(ast2[1], ast2[2], ast2[3], ast2[4])
+    time.sleep(0.5)
+    device_click_rectangle(ast2[1] - 185, min(315, ast2[2]), ast2[3], ast2[4])
+def approach_and_start_harvest():
+    # return 0: all fine, return 1: found no asteroid
+    print('\t\t:approach_and_start_harvest')
+    target_action(1, 2)
+    the_module = None
+    for module in get_module_list():
+        if module[1] == 'harvest':
+            the_module = module
+            break
+
+    for i in range(20):
+        activate_module(the_module)
+        wait_and_watch_out(4)
+        if get_module_is_active(the_module):
+            activate_the_modules('harvest')
+            return 0
+        wait_and_watch_out(10)
+    return 1
 def image_read_asteroid(image1):
     print('\t\timage_read_asteroid()')
     min_value = 10000
@@ -39,9 +65,11 @@ def get_list_asteroid():
     # swap_filter('ining')
     # click filter element to expand filter
     device_click_filter_block()
-    list_ast = []
-
+    time.sleep(0.3)
     device_update_cs()
+
+    wait_and_watch_out()
+    list_ast = []
 
     # create a list of all anomaly locations (on screen)
     x, y, w, h = 731, 49, 10, 474
@@ -69,162 +97,135 @@ def get_list_asteroid():
             # cv.waitKey()
 
             list_ast.append([image_read_asteroid(crop_img), x_text - 40, y_text - 4, 150, 35])
-            cv.rectangle(get_cs_cv(), (x_text - 40, y_text-4), (x_text - 40 + 150, y_text-4 + 35), (0, 0, 255), 2)
+            # cv.rectangle(get_cs_cv(), (x_text - 40, y_text-4), (x_text - 40 + 150, y_text-4 + 35), (0, 0, 255), 2)
     # cv.imshow('.', CS_cv)
     # cv.waitKey()
     return list_ast
-def get_good_asteroid_from_list(ast_list):
-    print('\tget_good_asteroid_from_list()')
-    file = open(Path_to_script + 'assets\\ore_pref.txt')
-    tmp = file.readline().strip()
-    new_list = []
-    while tmp != '':
-        for ast2 in ast_list:
-            if ast2[0] == tmp:
-                new_list.append(ast2)
-        tmp = file.readline().strip()
-    if len(new_list) != 0:
-        return new_list[int(np.random.default_rng().random() * len(new_list))]
-
-    # swipe down
-    device_click_rectangle(740, 46, 161, 269)
-    device_swipe_from_circle(822, 493, 20, 400, 3)
-    ast_list = get_list_asteroid()
-
-    file = open(Path_to_script + 'assets\\ore_pref.txt')
-    tmp = file.readline().strip()
-    new_list = []
-    while tmp != '':
-        for ast2 in ast_list:
-            if ast2[0] == tmp:
-                new_list.append(ast2)
-        tmp = file.readline().strip()
-    if len(new_list) != 0:
-        return new_list[int(np.random.default_rng().random() * len(new_list))]
-
-    # nothing in belt
-    if get_cargo() > 70:
-        mining_return(0)
-        quit()
-    set_filter('esc', 1)
-    warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
-    mining_in_belt()
-    quit()
-def get_best_asteroid_from_list(ast_list):
-    print('\tget_good_asteroid_from_list()')
-    file = open(Path_to_script + 'assets\\ore_pref.txt')
-    tmp = file.readline().strip()
-    while tmp != '':
-        for ast in ast_list:
-            if ast[0] == tmp:
-                return ast
-        tmp = file.readline().strip()
-
-    # swipe down
-    device_click_rectangle(740, 46, 161, 269)
-    device_swipe_from_circle(822, 493, 20, 400, 3)
-    ast_list = get_list_asteroid()
-
-    file = open(Path_to_script + 'assets\\ore_pref.txt')
-    tmp = file.readline().strip()
-    while tmp != '':
-        for ast2 in ast_list:
-            if ast2[0] == tmp:
-                return ast2
-        tmp = file.readline().strip()
-    if get_cargo() > 70:
-        mining_return(0)
-        quit()
-    set_filter('esc', 1)
-    warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
-    mining_in_belt()
-    quit()
-def get_multiple_good_asteroids(ast_list):
-    print('\tget_good_asteroid_from_list()')
-    file = open(Path_to_script + 'assets\\ore_pref.txt')
-    tmp = file.readline().strip()
-    new_list = []
-    while tmp != '':
-        for ast2 in ast_list:
-            if ast2[0] == tmp:
-                new_list.append(ast2)
-        tmp = file.readline().strip()
-    if len(new_list) != 0:
-        return new_list
-
-    # nothing found immediately, swipe down
-    device_click_rectangle(740, 46, 161, 269)
-    device_swipe_from_circle(822, 493, 20, 400, 3)
-    ast_list = get_list_asteroid()
-
-    file = open(Path_to_script + 'assets\\ore_pref.txt')
-    tmp = file.readline().strip()
-    new_list = []
-    while tmp != '':
-        for ast2 in ast_list:
-            if ast2[0] == tmp:
-                new_list.append(ast2)
-        tmp = file.readline().strip()
-    if len(new_list) != 0:
-        return new_list
-
-    if get_cargo() > 70:
-        mining_return(0)
-        quit()
-    set_filter('esc', 1)
-    warp_in_system_handling(randint(2, 4), 0, 1, 'ining')
-    mining_in_belt()
-    quit()
-
 # TASKS
 def mine():
-    print(' mine')
-    if get_speed() > 50:
-        device_click_circle(353, 454, 20)
-        to_wait = 1
-
-    # select some asteroid
+    # returns 0: everything all right, 1: asteroid belt empty, not in asteroid belt
+    print('\tlock_multiple_good_asteroids()')
+    activate_the_modules('prop')
     set_filter('inin', 0)
-    device_update_cs()
-    tmp = get_filter_icon('asteroid')
-    if tmp == 0:
-        set_filter('esc', 0)
-        warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
-        mining_in_belt()
-        quit()
-    device_click_rectangle(tmp[0] + 1, tmp[1] + 1, 1, 1)
-    wait_and_watch_out(2)
-    device_update_cs()
-    a_list = get_list_asteroid()
+    count = 0
 
-    # catch for ancient remains
-    loot_green = [48, 94, 87]
-    x, y = 362, 457
-    if compare_colors(loot_green, get_cs_cv()[y][x]) < 15:
-        device_click_circle(x, y, 15)
+    # CATCH: is the miner in asteroid belt?
+    asteroid_icon = get_filter_icon('asteroid')
+    if asteroid_icon == 0:
+        return 1
+    device_click_rectangle(asteroid_icon[0] + 1, asteroid_icon[1] + 1, 1, 1)
 
-    # asteroid = get_good_asteroid_from_list(a_list)
-    new_list = get_multiple_good_asteroids(a_list)
-    to_lock = min(len(new_list), 4)
-    for i in range(to_lock):
-        asteroid = new_list[i]
-        print(' mining ', asteroid[0])
-        asteroid.pop(0)
+    # find first asteroid
+    if 1:
+        print('\t\t:find first asteroid')
+        ast_list = get_list_asteroid()
+        file = open(Path_to_script + 'assets\\ore_pref.txt')
+        tmp = file.readline().strip()
+        while tmp != '':
+            for ast2 in ast_list:
+                if ast2[0] == tmp:
 
-        wait_and_watch_out(0)
-        # click filter element to expand filter
-        if asteroid[1] > 260:
+                    # lock asteroid
+                    lock_asteroid(ast2)
+                    count += 1
+                    break
+
+            if count == 1:
+                break
+            tmp = file.readline().strip()
+        file.close()
+
+        if count == 0:
+            # swipe down
             device_click_filter_block()
+            wait_and_watch_out()
+            time.sleep(0.5)
+            device_swipe_from_circle(822, 493, 20, 400, 3)
 
-        time.sleep(1)
-        device_click_rectangle(asteroid[0], asteroid[1], asteroid[2], asteroid[3])
-        time.sleep(0.5)
-        device_click_rectangle(asteroid[0] - 185, min(315, asteroid[1]), asteroid[2], asteroid[3])
+            # second try, should never get here
+            ast_list = get_list_asteroid()
+            file = open(Path_to_script + 'assets\\ore_pref.txt')
+            tmp = file.readline().strip()
+            while tmp != '':
+                for ast2 in ast_list:
+                    if ast2[0] == tmp:
 
-    # click filter element to expand filter
-    target_action(1, 2)
-    wait_and_watch_out(0)
-def wait_and_watch_out(sec):
+                        # lock asteroid
+                        lock_asteroid(ast2)
+                        count += 1
+                        break
+
+                if count == 1:
+                    break
+                tmp = file.readline().strip()
+            file.close()
+            if count == 0:
+                return 1
+        device_update_cs()
+        wait_and_watch_out()
+
+    # approach first asteroid and establish mining
+    approach_and_start_harvest()
+
+    # wait for ship to slow down
+    second_wait = 0
+    while 1:
+        wait_and_watch_out(6)
+        if get_speed() < 10:
+            if second_wait:
+                break
+            second_wait = 1
+
+
+    # lock all good asteroids in belt
+    if 1:
+        print('\t\t:lock the rest')
+        # reset list
+        device_click_rectangle(asteroid_icon[0] + 1, asteroid_icon[1] + 1, 1, 1)
+
+        ast_list = get_list_asteroid()
+        file = open(Path_to_script + 'assets\\ore_pref.txt')
+        tmp = file.readline().strip()
+        while tmp != '':
+            for ast2 in ast_list:
+                if ast2[0] == tmp:
+
+                    # lock asteroid if not the first one
+                    if ast2[2] > 80:
+                        lock_asteroid(ast2)
+                        count += 1
+
+            if count == 6:
+                break
+            tmp = file.readline().strip()
+        file.close()
+
+        if count < 6:
+            wait_and_watch_out(4)
+            # swipe down
+            device_click_filter_block()
+            wait_and_watch_out()
+            time.sleep(0.5)
+            device_swipe_from_circle(822, 493, 20, 400, 3)
+
+            # second part of belt
+            ast_list = get_list_asteroid()
+            file = open(Path_to_script + 'assets\\ore_pref.txt')
+            tmp = file.readline().strip()
+            while tmp != '':
+                for ast2 in ast_list:
+                    if ast2[0] == tmp:
+
+                        # lock asteroid (locked ones could be ignored)
+                        lock_asteroid(ast2)
+                        count += 1
+
+                if count == 6:
+                    break
+                tmp = file.readline().strip()
+            file.close()
+        return 0
+def wait_and_watch_out(sec=0):
     print('\twait_and_watch_out')
     device_update_cs()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
@@ -285,7 +286,6 @@ def warp_in_system_handling(target_nbr, distance, should_set_home, desired_filte
     if tmp == 2:
         warp_in_system_handling(target_nbr, distance, should_set_home, desired_filter)
     # 0 is fine
-    activate_the_modules('prop')
 def loot():
     device_update_cs()
     # sometimes, ancient thing spawns, slow down
@@ -332,69 +332,58 @@ def mining_from_station():
         else:
             warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
 
-    mining_in_belt()
+    while mine():
+        set_filter('esc', 0)
+
+        time.sleep(3)
+        if get_name() == 'bronson':
+            warp_in_system_handling(1, 0, 1, 'ining')
+        else:
+            if get_name() == 'kort':
+                warp_in_system_handling(3, 0, 1, 'ining')
+            else:
+                warp_in_system_handling(randint(1, 4), 0, 1, 'ining')
+
+    belt_handling()
+    mining_return(0)
 # todo
-def mining_in_belt():
+def belt_handling():
     timer_for_new_asteroid = time.time()
     while 1:
         print(' mining_in_belt()')
-        device_update_cs()
+        wait_and_watch_out()
 
         # check if time is up
-        if get_cargo() > 0:
-            if get_eco_mode():
-                device_toggle_eco_mode()
-                wait_and_watch_out(2)
+        if get_cargo() > 95:
             loot()
             deactivate_the_modules('harvest')
-            mining_return(0)
             return
 
         # check if mining equipment is busy/ easily activated
-        # if not, deactivate eco_state and start mining
         miners_active = 1
-        stop = 0
         for module in get_module_list():
-            if module[1] == 'harvest' and stop == 0:
+            if module[1] == 'harvest' and miners_active:
                 if not get_module_is_active(module):
                     wait_and_watch_out(4)
                     if not get_module_is_active(module):
                         activate_module(module)
-                        if get_eco_mode():
-                            wait_and_watch_out(8)
-                        else:
-                            wait_and_watch_out(2)
-                        device_update_cs()
+                        wait_and_watch_out(2)
                         if not get_module_is_active(module):
                             miners_active = 0
-                            stop = 1
+
+        wait_and_watch_out()
+
         if not miners_active:
+            loot()
             if get_cargo() > 85:
-                device_toggle_eco_mode()
-                time.sleep(2)
-                loot()
-                mining_return(0)
                 return
             if get_is_locked(1) or get_is_locked(2):
-                target_action(1, 2)
-                wait_and_watch_out(20)
-                device_swipe_from_circle(435, 265, 250, 1, 0)
+                if approach_and_start_harvest():
+                    print('something went wrong, no target asteroid?')
             else:
-                if get_eco_mode():
-                    device_toggle_eco_mode()
-                    wait_and_watch_out(2)
                 loot()
-                wait_and_watch_out(0)
-                print('searching for asteroid')
-                mine()
+                return
         else:
-            # set state to stable, autopilot
-            if not get_eco_mode():
-                if not get_autopilot():
-                    print('setting path home')
-                    time.sleep(2)
-                    set_home()
-                device_toggle_eco_mode()
             wait_and_watch_out(10)
 def mining_return(got_ganked):
     print(' mining_return()')
@@ -412,6 +401,7 @@ def mining_return(got_ganked):
 
     print(' \tchecking if dead')
     if get_is_capsule() or get_is_in_station():
+        print('seems to be dead')
         absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
         absolutely_professional_database.write(
             get_name() + ' died at:' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)) + '\n\n')
@@ -447,7 +437,6 @@ def mining_return(got_ganked):
         click_close_inv_window()
 
     mining_from_station()
-    return
 def test_esc():
     set_filter('ing', 0)
     device_toggle_eco_mode()
@@ -487,7 +476,7 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    undock_and_modules()
+    return
 
 
 
