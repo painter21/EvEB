@@ -158,21 +158,31 @@ def update_modules():
     tmp = file.readline()
     while tmp != '':
         tmp = tmp.split()
-        ar = cv.imread(path_to_script + 'assets\\modules\\' + ship + '\\' + tmp[0] + '.png')
-        result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
-        threshold = 0.98
-        loc = np.where(result >= threshold)
-        accepted_list = []
-        for pt in zip(*loc[::-1]):
-            continue_value = 1
-            for point in accepted_list:
-                if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
+
+        # only 1 prop module (often sees afterburner and warpdrive as the same)
+        continue_value = 1
+        if tmp[1] == 'prop':
+            for module in ModuleList:
+                if module[1] == 'prop':
                     continue_value = 0
-            if continue_value == 1:
-                accepted_list.append(pt)
-                center = (pt[0] + int(tmp[2]), pt[1] + int(tmp[3]))
-                ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
-                # cv.circle(CS_cv, center, module_icon_radius, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
+        if continue_value == 1:
+
+            ar = cv.imread(path_to_script + 'assets\\modules\\' + ship + '\\' + tmp[0] + '.png')
+            result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
+            threshold = 0.98
+            loc = np.where(result >= threshold)
+            accepted_list = []
+
+            for pt in zip(*loc[::-1]):
+                continue_value = 1
+                for point in accepted_list:
+                    if abs(pt[1] - point[1]) < 10 and abs(pt[0] - point[0]) < 10:
+                        continue_value = 0
+                if continue_value == 1:
+                    accepted_list.append(pt)
+                    center = (pt[0] + int(tmp[2]), pt[1] + int(tmp[3]))
+                    ModuleList.append([tmp[0], tmp[1], center[0], center[1]])
+                    # cv.circle(CS_cv, center, module_icon_radius, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
         tmp = file.readline()
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
