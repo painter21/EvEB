@@ -980,10 +980,14 @@ def wait_end_navigation(safety_time):
     while 1:
         device_update_cs()
         if not get_autopilot():
+            if get_is_in_station():
+                return 1
             # for stargate warps
             time.sleep(10)
             device_update_cs()
             if not get_autopilot():
+                if get_is_in_station():
+                    return 1
                 time.sleep(10)
                 device_update_cs()
                 if not get_autopilot():

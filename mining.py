@@ -30,7 +30,7 @@ def lock_asteroid(ast2):
         time.sleep(1)
     device_click_rectangle(ast2[1], ast2[2], ast2[3], ast2[4])
     time.sleep(0.5)
-    device_click_rectangle(ast2[1] - 185, min(315, ast2[2]), ast2[3], ast2[4])
+    device_click_rectangle(ast2[1] - 185, min(320, ast2[2]), ast2[3], ast2[4])
 def approach_and_start_harvest():
     # return 0: all fine, return 1: found no asteroid
     print('\t\t:approach_and_start_harvest')
@@ -370,12 +370,16 @@ def belt_handling():
         for module in get_module_list():
             if module[1] == 'harvest' and miners_active:
                 if not get_module_is_active(module):
+                    if not get_is_locked(1):
+                        miners_active = 0
+                        break
                     wait_and_watch_out(4)
                     if not get_module_is_active(module):
                         activate_module(module)
                         wait_and_watch_out(2)
                         if not get_module_is_active(module):
                             miners_active = 0
+                            break
 
         wait_and_watch_out()
 
@@ -402,8 +406,6 @@ def mining_return(got_ganked):
         ding_when_ganked()
         save_screenshot()
     device_update_cs()
-
-    catch_bad_eco_mode(1)
 
     print(' \tchecking if dead')
     if get_is_capsule() or get_is_in_station():
