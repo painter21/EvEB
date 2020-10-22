@@ -733,6 +733,8 @@ def close_pop_ups():
     print('\t\t\tclick_close_for_full_window()')
     # click on close
     device_click_circle(926, 30, 10)
+    device_click_circle(932, 31, 10)
+
 
 # TASKS
 # construction blocks for combined tasks or algorithms

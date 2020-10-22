@@ -248,6 +248,9 @@ def mine():
 
                     # lock asteroid
                     lock_asteroid(ast2)
+                    wait_and_watch_out(2)
+                    if not get_is_locked(1):
+                        lock_asteroid(ast2)
                     count += 1
                     break
 
@@ -273,6 +276,9 @@ def mine():
 
                         # lock asteroid
                         lock_asteroid(ast2)
+                        wait_and_watch_out(2)
+                        if not get_is_locked(1):
+                            lock_asteroid(ast2)
                         count += 1
                         break
 
@@ -413,8 +419,12 @@ def mining_return(got_ganked):
         wait_end_navigation(20)
 
         # catch notification window
-        if get_is_in_station() == 0:
-            close_pop_ups()
+        for i in range(10):
+            if get_is_in_station() == 0:
+                close_pop_ups()
+            else:
+                break
+            time.sleep(2)
 
         print('arriving')
         # dump ressources
@@ -433,8 +443,12 @@ def mining_return(got_ganked):
     if got_ganked == 1:
         time.sleep(get_safety_time())
 
-    if get_is_in_station() == 0:
-        close_pop_ups()
+    for i in range(10):
+        if get_is_in_station() == 0:
+            close_pop_ups()
+        else:
+            break
+        time.sleep(2)
 
     mining_from_station()
 def test_esc():
