@@ -194,7 +194,7 @@ def loot():
 # STATES
 def mining_from_station():
     print('\tmining_from_station()')
-    if start_program_time + 10800 > time.time():
+    if start_program_time + 10800 < time.time():
         os.system(
             "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
         quit()
