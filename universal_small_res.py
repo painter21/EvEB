@@ -520,6 +520,10 @@ def ding_when_ganked():
     print('\t\tding_when_ganked() ', ding_when_ganked)
     if ding == 1:
         playsound(path_to_script + 'assets\\sounds\\bell.wav')
+def log(something_to_write):
+    absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+    absolutely_professional_database.write(something_to_write + "\n\n")
+    absolutely_professional_database.close()
 def interface_show_player():
     print('\t\tinterface_show_player')
     x, y, h, w = 66, 1, 87, 127
@@ -950,6 +954,8 @@ def set_filter(string_in_name, force):
 # todo:
 # todo: should not be called from here
 def reset():
+    save_screenshot()
+    log('reset: ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)))
     close_pop_ups()
     time.sleep(2)
     set_home()

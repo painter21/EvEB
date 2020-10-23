@@ -503,7 +503,6 @@ def mining_from_station_in_null():
 
 # STARTS
 def main():
-    interface_show_player()
     mining_from_station()
 def custom():
     import os
