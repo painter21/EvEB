@@ -303,10 +303,13 @@ def get_autopilot_active():
     print('\t\t\tget_autopilot_active(): ', 0)
     return 0
 def get_is_capsule():
+    print('\t\t\tget_is_capsule(): start')
     tmp_module_list = []
     file = open(path_to_script + 'assets\\modules\\' + ship + '\\_pos.txt')
+    print(0)
     tmp = file.readline()
     while tmp != '':
+        print(tmp)
         tmp = tmp.split()
         ar = cv.imread(path_to_script + 'assets\\modules\\' + ship + '\\' + tmp[0] + '.png')
         result = cv.matchTemplate(CS_cv, ar, cv.TM_CCORR_NORMED)
@@ -324,6 +327,7 @@ def get_is_capsule():
                 tmp_module_list.append([tmp[0], tmp[1], center[0], center[1]])
                 # cv.circle(CS_cv, center, module_icon_radius, color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
         tmp = file.readline()
+    print(1)
     file.close()
     if len(tmp_module_list) == 0:
         print('\t\t\tget_is_capsule(): ', 1)
@@ -338,6 +342,15 @@ def get_is_in_station():
         print('\t\t\tget_is_in_station(): ', 1)
         return 1
     print('\t\t\tget_is_in_station(): ', 0)
+    return 0
+def get_inventory_open():
+    color = [51, 110, 100]
+    x_a, y_a, x_b, y_b = 37, 18, 37, 40
+    if compare_colors(CS_image[y_a][x_a], color) < 8 and \
+            compare_colors(CS_image[y_b][x_b], color) < 8:
+        print('\t\t\tget_inventory_open(): ', 1)
+        return 1
+    print('\t\t\tget_inventory_open(): ', 0)
     return 0
 # slow
 def get_filter_icon(filter_name):
@@ -731,9 +744,22 @@ def device_click_filter_block():
     device_click_rectangle(740, 46, 161, 269)
 def close_pop_ups():
     print('\t\t\tclick_close_for_full_window()')
-    # click on close
-    device_click_circle(926, 30, 10)
-    device_click_circle(932, 31, 10)
+    started = 0
+    stopped = 0
+    for i in range(10):
+        device_update_cs()
+        if get_inventory_open():
+            started = 1
+            # click on close
+            device_click_circle(926, 30, 10)
+            time.sleep(2)
+        else:
+            stopped = 1
+            break
+
+    if started == 1 and stopped == 0:
+
+        device_click_circle(932, 31, 10)
 
 
 # TASKS
@@ -825,7 +851,7 @@ def dump_tail():
     device_click_circle(926, 30, 10)
     print('inventory value:', value)
     return value
-def activate_autopilot(force_click):
+def activate_autopilot(force_click=0):
     print('\t\tactivate_autopilot()', force_click)
     if force_click:
         device_click_circle(22, 116, 10)
@@ -922,7 +948,17 @@ def set_filter(string_in_name, force):
     # cv.waitKey()
 # longer
 # todo:
+# todo: should not be called from here
 def reset():
+    close_pop_ups()
+    time.sleep(2)
+    set_home()
+    time.sleep(2)
+    activate_autopilot()
+    wait_end_navigation()
+    os.system("start E:\Eve_Echoes\Bot\\ahk_scripts\start_bat_" + get_name() + ".ahk")
+    quit()
+def hard_reset():
     quit()
 def set_home():
     print('\t\tset_home()')
@@ -975,7 +1011,7 @@ def escape_autopilot():
     deactivate_the_modules('prop')
     activate_the_modules('esc')
     device_click_rectangle(246, 269, 77, 73)
-def wait_end_navigation(safety_time):
+def wait_end_navigation(safety_time=20):
     print('\t\twait_end_navigation()')
     while 1:
         device_update_cs()
@@ -1114,13 +1150,15 @@ def warp_wait_trouble_fix_extension(should_set_home):
     return warp_wait()
 def warp_wait():
     print('\t\twarp_wait()')
-    while 1:
+    for i in range(500):
         # does nothing until speed bar goes to 15%
         device_update_cs()
         if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
             return 1
         if get_speed() < 15:
             return 0
+        time.sleep(0.5)
+    reset()
 
 
 

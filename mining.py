@@ -194,6 +194,10 @@ def loot():
 # STATES
 def mining_from_station():
     print('\tmining_from_station()')
+    if start_program_time + 10800 > time.time():
+        os.system(
+            "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
+        quit()
     undock_and_modules()
     activate_filter_window()
     time.sleep(1)
@@ -201,6 +205,13 @@ def mining_from_station():
     set_filter('esc', 0)
 
     time.sleep(3)
+    if get_filter_list_size() < 2:
+        set_home()
+        activate_autopilot()
+        time.sleep(300)
+        mining_from_station()
+        quit()
+
     if get_name() == 'bronson':
         warp_in_system_handling(1, 0, 1, 'ining')
     else:
@@ -408,7 +419,9 @@ def mining_return(got_ganked):
     device_update_cs()
 
     print(' \tchecking if dead')
-    if get_is_capsule() or get_is_in_station():
+    in_station = get_is_in_station()
+    is_capsule = get_is_capsule()
+    if is_capsule or in_station:
         print('seems to be dead')
         absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
         absolutely_professional_database.write(
@@ -443,6 +456,7 @@ def mining_return(got_ganked):
         playsound(Path_to_script + 'assets\\sounds\\bell.wav')
         quit()
     if got_ganked == 1:
+        print('waiting ' + str(safety_time) + 's')
         time.sleep(get_safety_time())
 
     for i in range(10):
@@ -492,7 +506,8 @@ def main():
     interface_show_player()
     mining_from_station()
 def custom():
-    return
+    import os
+    os.system("start E:\Eve_Echoes\Bot\\ahk_scripts\start_bat_" + get_name() + ".ahk")
 
 read_config_file()
 config_uni()
