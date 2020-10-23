@@ -1,7 +1,6 @@
 # only works on 960x540
 from universal_small_res import *
 from random import randint
-
 Path_to_script = ''
 def read_config_file():
     print('\tread_config_file()')
@@ -365,7 +364,8 @@ def mine():
         return 0
 # todo
 def belt_handling():
-    timer_for_new_asteroid = time.time()
+    time_screen_freeze = time.time()
+    last_cargo = 0
     while 1:
         print(' mining_in_belt()')
         wait_and_watch_out()
@@ -375,6 +375,22 @@ def belt_handling():
             loot()
             deactivate_the_modules('harvest')
             return
+
+        if time_screen_freeze + 180 < time.time():
+            time_screen_freeze = time.time()
+            if get_cargo() == last_cargo:
+                # does the screen react?  open and close inventory
+                device_click_rectangle(5, 61, 83, 26)
+                for i in range(5):
+                    time.sleep(1.5)
+                    device_update_cs()
+                    if get_inventory_open():
+                        does_react = 1
+                        break
+                    if i == 4:
+                        hard_reset()
+
+            close_pop_ups()
 
         # check if mining equipment is busy/ easily activated
         miners_active = 1
@@ -505,10 +521,9 @@ def mining_from_station_in_null():
 def main():
     mining_from_station()
 def custom():
-    import os
+    hard_reset()
     # os.system("start /wait cmd /c ahk devices & pause")
-    test = os.system("cmd /k adb devices & pause")
-    print(test)
+    # test = os.system("cmd /k taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
 
 read_config_file()
 config_uni()

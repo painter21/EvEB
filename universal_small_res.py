@@ -952,20 +952,35 @@ def set_filter(string_in_name, force):
     # cv.imshow('.', crop_img)
     # cv.waitKey()
 # longer
-# todo:
-# todo: should not be called from here
 def reset():
     save_screenshot()
     log('reset: ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)))
+    # does the screen react?  open and close inventory
+    device_click_rectangle(5, 61, 83, 26)
+    for i in range(5):
+        time.sleep(1.5)
+        device_update_cs()
+        if get_inventory_open():
+            does_react = 1
+            break
+        if i == 4:
+            hard_reset()
+
     close_pop_ups()
     time.sleep(2)
     set_home()
     time.sleep(2)
     activate_autopilot()
     wait_end_navigation()
-    os.system("start E:\Eve_Echoes\Bot\\ahk_scripts\start_bat_" + get_name() + ".ahk")
-    quit()
+    if get_is_in_station():
+        os.system("start E:\Eve_Echoes\Bot\\ahk_scripts\start_bat_" + get_name() + ".ahk")
+    else:
+        hard_reset()
 def hard_reset():
+    # for /f "tokens=3,*" %a in ('tasklist /fo list /v ^| find "Window Title"') do @if not "%a"=="N/A" echo %a %b
+    os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Kort Foster\" /T")
+    os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
+    playsound(path_to_script + 'assets\\sounds\\bell.wav')
     quit()
 def set_home():
     print('\t\tset_home()')
