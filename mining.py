@@ -506,7 +506,9 @@ def main():
     mining_from_station()
 def custom():
     import os
-    os.system("start E:\Eve_Echoes\Bot\\ahk_scripts\start_bat_" + get_name() + ".ahk")
+    # os.system("start /wait cmd /c ahk devices & pause")
+    test = os.system("cmd /k adb devices & pause")
+    print(test)
 
 read_config_file()
 config_uni()
