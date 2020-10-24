@@ -745,7 +745,7 @@ def device_toggle_eco_mode():
     # subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
 def device_record_video():
     print('device_record_video')
-    subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\recording_" + name + ".ahk"])
+    subprocess.Popen(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\recording_" + name + ".ahk"])
 def device_update_cs():
     print('\t\t\tdevice_update_cs()')
     global CS_cv, CS, CS_image
@@ -1042,7 +1042,7 @@ def escape_autopilot():
     device_update_cs()
     repair(100)
     activate_autopilot(0)
-    time.sleep(2)
+    time.sleep(1)
     deactivate_the_modules('prop')
     activate_the_modules('esc')
     device_click_rectangle(465, 431, 32, 5)
