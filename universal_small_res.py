@@ -685,7 +685,6 @@ def target_action(target_nbr, action_nbr, distance=0):
     device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
     # device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
     device_swipe_from_circle(dd_x + target_nbr * tar_off_x + randint(1, 170),  dd_y + dd_off_y * action_nbr + randint(1, 47), 0, distance, 1)
-    print(0)
     return
 def filter_action(target_nbr, action_nbr, expected_list_size):
     print('\t\t\tfilter_action()', target_nbr, action_nbr, expected_list_size)
@@ -1036,7 +1035,6 @@ def escape_autopilot():
     if get_eco_mode():
         device_toggle_eco_mode()
     time.sleep(1)
-    save_screenshot()
     device_update_cs()
     repair(100)
     activate_autopilot(0)

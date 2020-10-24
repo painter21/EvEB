@@ -35,7 +35,7 @@ def lock_asteroid(ast2):
     device_click_rectangle(ast2[1] - 185, min(320, ast2[2]), ast2[3], ast2[4])
 def approach_and_start_harvest():
     # return 0: all fine, return 1: found no asteroid
-    print('\t\t:approach_and_start_harvest')
+    print('\tapproach_and_start_harvest')
     target_action(1, 2, 8)
     activate_the_modules('prop')
     the_module = None
@@ -49,9 +49,11 @@ def approach_and_start_harvest():
         wait_and_watch_out(4)
         if get_module_is_active(the_module):
             activate_the_modules('harvest')
+            deactivate_the_modules('prop')
             return 0
         wait_and_watch_out(10)
     deactivate_the_modules('prop')
+    log('approach and start harvest cap')
     return 1
 def image_read_asteroid(image1):
     print('\t\timage_read_asteroid()')
