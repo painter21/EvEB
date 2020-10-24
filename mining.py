@@ -1,6 +1,5 @@
 # only works on 960x540
 from universal_small_res import *
-from random import randint
 Path_to_script = ''
 def read_config_file():
     print('\tread_config_file()')
@@ -33,7 +32,7 @@ def lock_asteroid(ast2):
 def approach_and_start_harvest():
     # return 0: all fine, return 1: found no asteroid
     print('\t\t:approach_and_start_harvest')
-    target_action(1, 2)
+    target_action(1, 2, 8)
     the_module = None
     for module in get_module_list():
         if module[1] == 'harvest':
@@ -84,21 +83,22 @@ def get_list_asteroid():
         # ignore double results
         if pt[1] > previous_point_y + 10:
             previous_point_y = pt[1]
-            # icon offset, size of text field
-            y_text, x_text = pt[1] - 12 + y, pt[0] + 59 + x
-            crop_img = get_cs_cv()[y_text:y_text + 33, x_text:x_text + 117]
 
-            # template gen
-            # remove darker pixels, seems to be a bad idea
-            # crop_img = remove_bright_pix(crop_img, 75)
-            # cv.imwrite('test.png', crop_img)
-            # cv.imshow('.', crop_img)
-            # cv.waitKey()
+            # print(get_cs_cv()[y + pt[1] + 1][x + pt[0] + 10][0])
+            if get_cs_cv()[y + pt[1] + 1][x + pt[0] + 10][0] < 80:
+                # icon offset, size of text field
+                y_text, x_text = pt[1] - 12 + y, pt[0] + 59 + x
+                crop_img = get_cs_cv()[y_text:y_text + 33, x_text:x_text + 117]
 
-            list_ast.append([image_read_asteroid(crop_img), x_text - 40, y_text - 4, 150, 35])
-            # cv.rectangle(get_cs_cv(), (x_text - 40, y_text-4), (x_text - 40 + 150, y_text-4 + 35), (0, 0, 255), 2)
-    # cv.imshow('.', CS_cv)
-    # cv.waitKey()
+                # template gen
+                # remove darker pixels, seems to be a bad idea
+                # crop_img = remove_bright_pix(crop_img, 75)
+                # cv.imwrite('test.png', crop_img)
+                # cv.imshow('.', crop_img)
+                # cv.waitKey()
+
+                list_ast.append([image_read_asteroid(crop_img), x_text - 40, y_text - 4, 150, 35])
+    # show_image()
     return list_ast
 # TASKS
 def wait_and_watch_out(sec=0):
@@ -327,10 +327,8 @@ def mine():
             for ast2 in ast_list:
                 if ast2[0] == tmp:
 
-                    # lock asteroid if not the first one
-                    if ast2[2] > 80:
-                        lock_asteroid(ast2)
-                        count += 1
+                    lock_asteroid(ast2)
+                    count += 1
 
             if count == 6:
                 break
@@ -353,7 +351,7 @@ def mine():
                 for ast2 in ast_list:
                     if ast2[0] == tmp:
 
-                        # lock asteroid (locked ones could be ignored)
+                        # lock asteroid
                         lock_asteroid(ast2)
                         count += 1
 
@@ -521,9 +519,10 @@ def mining_from_station_in_null():
 def main():
     mining_from_station()
 def custom():
-    hard_reset()
-    # os.system("start /wait cmd /c ahk devices & pause")
-    # test = os.system("cmd /k taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
+    while 1:
+        time.sleep(2)
+        device_update_cs()
+        print(get_autopilot_active())
 
 read_config_file()
 config_uni()

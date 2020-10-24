@@ -13,6 +13,7 @@ from PIL import Image
 from playsound import playsound
 import os
 import datetime
+from random import randint
 
 tess.pytesseract.tesseract_cmd = 'E:\\Eve_Echoes\\Bot\Programs\\Tesseract-OCR\\tesseract.exe'
 def read_config_file_uni():
@@ -297,6 +298,8 @@ def get_autopilot():
     return 0
 def get_autopilot_active():
     x_c, y_c = 26, 121
+    add_point(x_c, y_c)
+    show_image()
     if compare_colors(CS_image[y_c][x_c], inner_autopilot_green) < 13:
         print('\t\t\tget_autopilot_active(): ', 1)
         return 1
@@ -494,11 +497,15 @@ def get_wallet_balance():
 
 # PRINTING
 # everything that creates a basic UI for the programmer
-def add_rectangle(x, y, w, h):
+def add_point(x, y, stroke_width=1):
+    print('\t\t\tadd_point(): ', x, y)
+    cv.rectangle(CS_cv, (x, y), (x + 1, y + 1),
+                 color=(0, 255, 0), thickness=stroke_width, lineType=cv.LINE_4)
+def add_rectangle(x, y, w, h, stroke_width=2):
     print('\t\t\tadd_rectangle(): ', x, y, w, h)
     cv.rectangle(CS_cv, (x, y), (x + w, y + h),
-                 color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
-def show_image(image, add):
+                 color=(0, 255, 0), thickness=stroke_width, lineType=cv.LINE_4)
+def show_image(image=CS_cv, add=0):
     print('\t\tshow_image()')
     if add == 0:
         cv.imshow('tmp', CS_cv)
@@ -669,14 +676,16 @@ def device_swipe_from_circle(x, y, r, d, direction):
     print('\t\t\tdevice_swipe_from_circle(): ', x, y, d, direction)
     Device.shell(f'input touchscreen swipe {x} {y} {np.cos(angle) * r + x} {np.sin(angle) * r + y} 1000')
     power_nap()
-def target_action(target_nbr, action_nbr):
+def target_action(target_nbr, action_nbr, distance=0):
     print('\t\t\ttarget_action()', target_nbr, action_nbr)
     target_nbr -= 1
     action_nbr -= 1
     tar_x, tar_y, tar_off_x = 670, 38, -61
     dd_x, dd_y, dd_off_y = 525, 78, 58
     device_click_circle(tar_x + target_nbr * tar_off_x, tar_y, module_icon_radius)
-    device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
+    # device_click_rectangle(dd_x + target_nbr * tar_off_x, dd_y + dd_off_y * action_nbr, 170, 47)
+    device_swipe_from_circle(dd_x + target_nbr * tar_off_x + randint(1, 170),  dd_y + dd_off_y * action_nbr + randint(1, 47), 0, distance, 1)
+    print(0)
     return
 def filter_action(target_nbr, action_nbr, expected_list_size):
     print('\t\t\tfilter_action()', target_nbr, action_nbr, expected_list_size)
@@ -1026,8 +1035,9 @@ def escape_autopilot():
     print('\tescape_autopilot()')
     if get_eco_mode():
         device_toggle_eco_mode()
-    repair(100)
     time.sleep(1)
+    device_update_cs()
+    repair(100)
     activate_autopilot(0)
     time.sleep(2)
     deactivate_the_modules('prop')
@@ -1099,7 +1109,8 @@ def undock():
 
 
 # COMBINED TASKS
-def undock_and_modules():
+# todo add quit notification
+def undock_and_modules(error_count=0):
     print('\tundock_and_modules()')
     # set destination
     # set_system(planet)
@@ -1117,6 +1128,18 @@ def undock_and_modules():
     # sometimes the speed meter gets broken, redock to fix
     device_update_cs()
     update_modules()
+    if len(ModuleList) == 0:
+        if error_count == 5:
+            save_screenshot('kill')
+            log(get_name() + ' got destroyed. ')
+            set_home()
+            activate_autopilot()
+            quit()
+        log(get_name() + ' no modules, try again.')
+        set_home()
+        activate_autopilot()
+        wait_end_navigation()
+        undock_and_modules(error_count+1)
     speed_x, speed_y = 460, 495
     print('speed-o-meter value: ', get_cs_cv()[speed_y][speed_x][2])
     if get_cs_cv()[speed_y][speed_x][2] < 130 or len(ModuleList) < 2:
