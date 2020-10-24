@@ -377,7 +377,8 @@ def get_filter_icon(filter_name):
                 return max_loc[0] + x, max_loc[1] + y
     return 0
 def get_filter_list_size():
-    len(get_filter_pos())
+    print('\t\tget_filter_list_size()')
+    return len(get_filter_pos())
 def correct_filter_pos_point(x, y):
     for y_off in range(20):
         still_text = 0
@@ -389,6 +390,7 @@ def correct_filter_pos_point(x, y):
             return x, y-y_off+1
     return x, y - 20 + 1
 def get_filter_pos():
+    print('\t\tget_filter_pos()')
     device_click_filter_block()
     time.sleep(0.4)
     device_update_cs()

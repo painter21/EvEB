@@ -219,13 +219,14 @@ def mining_from_station():
             time.sleep(300)
             mining_from_station()
             quit()
-        if asteroid_belts == 1 or get_name() == 'bronson':
-            warp_in_system_handling(1, 0, 1, 'ining')
-
-        if get_name() == 'kort':
-            warp_in_system_handling(asteroid_belts, 0, 1, 'ining')
         else:
-            warp_in_system_handling(randint(1, asteroid_belts), 0, 1, 'ining')
+            if asteroid_belts == 1 or get_name() == 'bronson':
+                warp_in_system_handling(1, 0, 1, 'ining')
+            else:
+                if get_name() == 'kort':
+                    warp_in_system_handling(asteroid_belts, 0, 1, 'ining')
+                else:
+                    warp_in_system_handling(randint(1, asteroid_belts), 0, 1, 'ining')
 
     while mine():
         set_filter('esc', 0)
