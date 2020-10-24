@@ -513,15 +513,7 @@ def mining_from_station_in_null():
 def main():
     mining_from_station()
 def custom():
-    update_modules()
-    the_module = None
-    for module in get_module_list():
-        if module[1] == 'prop':
-            the_module = module
-    while 1:
-        time.sleep(2)
-        device_update_cs()
-        deactivate_module(the_module)
+    get_filter_pos()
 
 
 read_config_file()

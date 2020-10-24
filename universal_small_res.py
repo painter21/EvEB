@@ -31,9 +31,6 @@ def read_config_file_uni():
         if tmp[0] == 'planet':
             global planet
             planet = int(tmp[1])
-        if tmp[0] == 'random_warp':
-            global random_warp
-            random_warp = int(tmp[1])
         if tmp[0] == 'home':
             global home
             home = int(tmp[1])
@@ -59,6 +56,9 @@ def read_config_file_uni():
             global ding
             print('set ding when ganked to ', tmp[1])
             ding = int(tmp[1])
+        if tmp[0] == 'whatsapp':
+            global whatsapp
+            whatsapp = int(tmp[1])
         tmp = file.readline()
     file.close()
 
@@ -89,15 +89,15 @@ if 1:
     start = 'main'
     ship = 'frigate'
     ding = 0
+    whatsapp = 0
     preferredOrbit = 29
     planet = 0
-    repeat = 0
+    repeat = 1
     safety_time = 300
     device_nr = 1
     name = ''
     home = 0
     bait = 0
-    random_warp = 1
     time_farming = time.time()
     # connect to Bluestacks
     Adb = Client(host='127.0.0.1', port=5037)
@@ -133,8 +133,6 @@ def get_name():
     return name
 def get_bait():
     return bait
-def get_random_warp():
-    return random_warp
 def get_repeat():
     return repeat
 def get_start():
@@ -378,9 +376,35 @@ def get_filter_icon(filter_name):
                 # show_image(image_remove_dark(crop_img, 130), 1)
                 return max_loc[0] + x, max_loc[1] + y
     return 0
-# todo
 def get_filter_list_size():
-    return random_warp
+    len(get_filter_pos())
+def correct_filter_pos_point(x, y):
+    for y_off in range(20):
+        still_text = 0
+        for x_off in range(10):
+            if abs(int(CS_cv[y - y_off][x - x_off][0]) - CS_cv[y - y_off][x + 2][0]) > 50:
+                still_text = 1
+                break
+        if still_text == 0:
+            return x, y-y_off+1
+    return x, y - 20 + 1
+def get_filter_pos():
+    device_click_filter_block()
+    time.sleep(0.4)
+    device_update_cs()
+    x, y, = 786, 41
+    last_y = -20
+    pos_list = []
+    # print(abs(int(CS_cv[y+y_off][x][0]) - CS_cv[y+y_off][x+2][0]), abs(int(CS_cv[y+y_off][x+1][0] - CS_cv[y+y_off][x+2][0])))
+    for y_off in range(540-y-23):
+        if last_y + 50 < y+y_off:
+            if abs(int(CS_cv[y+y_off][x][0]) - CS_cv[y+y_off][x+2][0]) > 50 or abs(int(CS_cv[y+y_off][x+1][0]) - CS_cv[y+y_off][x+2][0]) > 50:
+                tmp = correct_filter_pos_point(x, y+y_off)
+                # add_point(tmp[0], tmp[1])
+                last_y = tmp[1]
+                pos_list.append(tmp)
+    # show_image()
+    return pos_list
 def get_is_locked(target):
     target -= 1
     # if target = 0
@@ -746,6 +770,12 @@ def device_toggle_eco_mode():
 def device_record_video():
     print('device_record_video')
     subprocess.Popen(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\recording_" + name + ".ahk"])
+def notify_whatsapp():
+    print('notify_whatsapp')
+    if whatsapp == 1:
+        subprocess.Popen(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+                          "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul_whatsapp.ahk"])
+
 def device_update_cs():
     print('\t\t\tdevice_update_cs()')
     global CS_cv, CS, CS_image
@@ -991,6 +1021,7 @@ def hard_reset():
     os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Kort Foster\" /T")
     os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
     playsound(path_to_script + 'assets\\sounds\\bell.wav')
+    notify_whatsapp()
     quit()
 def set_home():
     print('\t\tset_home()')
@@ -1062,6 +1093,7 @@ def escape_autopilot():
         absolutely_professional_database.write(
             get_name() + ' died at:' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)) + '\n\n')
         absolutely_professional_database.close()
+        notify_whatsapp()
         quit()
     else:
         print('going home')
@@ -1162,6 +1194,7 @@ def undock_and_modules(error_count=0):
             log(get_name() + ' got destroyed. ')
             set_home()
             activate_autopilot()
+            notify_whatsapp()
             quit()
         log(get_name() + ' no modules, try again.')
         set_home()
