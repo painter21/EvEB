@@ -343,6 +343,7 @@ def mine():
         file.close()
 
         if count < 6:
+            current = count
             wait_and_watch_out(4)
             # swipe down
             device_click_filter_block()
@@ -365,6 +366,9 @@ def mine():
                 if count == 6:
                     break
                 tmp = file.readline().strip()
+            # sometimes, it does not find anything on the second page and te menue stays open, this is to prevent that
+            if count == current:
+                device_click_rectangle(465, 431, 32, 5)
             file.close()
         return 0
 # todo
@@ -527,7 +531,14 @@ def main():
     mining_from_station()
 def custom():
     update_modules()
-    mine()
+    the_module = None
+    for module in get_module_list():
+        if module[1] == 'prop':
+            the_module = module
+    while 1:
+        time.sleep(2)
+        device_update_cs()
+        deactivate_module(the_module)
 
 
 read_config_file()

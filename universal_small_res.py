@@ -456,8 +456,9 @@ def get_module_is_active(module):
         return 0
     activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
-    # add_rectangle(x, y, 0, 0)
-    if compare_colors(CS_image[y][x], activate_blue) < 15:
+    add_rectangle(x, y, 0, 0)
+    # print(compare_colors(CS_image[y][x], activate_blue))
+    if compare_colors(CS_image[y][x], activate_blue) < 25:
         print('\t\t\tget_module_is_active():', module[0], 1)
         return 1
     print('\t\t\tget_module_is_active():', module[0], 0)
@@ -903,10 +904,8 @@ def deactivate_the_modules(its_name):
     return tmp
 def deactivate_module(module):
     print('\t\tdeactivate_module()', module[0])
-    activate_blue, activate_red = [206, 253, 240, 255], [194, 131, 129, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
-
-    if compare_colors(CS_image[y][x], activate_blue) < 15:
+    if get_module_is_active(module) == 1:
         device_click_circle(module[2], module[3], module_icon_radius)
 def repair(desired_hp):
     print('\t\trepair() ', desired_hp)
