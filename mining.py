@@ -113,7 +113,6 @@ def wait_and_watch_out(sec=0):
     print('\twait_and_watch_out')
     device_update_cs()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
-        activate_autopilot(1)
         if get_bait() == 1:
             subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
                              "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
@@ -129,7 +128,6 @@ def wait_and_watch_out(sec=0):
         time.sleep(2)
         device_update_cs()
         if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
-            activate_autopilot(1)
             if get_bait() == 1:
                 subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
                                  "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
@@ -434,49 +432,34 @@ def belt_handling():
 def mining_return(got_ganked):
     print(' mining_return()')
     # activate autopilot and run (maybe i got ganked?)
-    escape_autopilot()
-    # usually, it spam clicks esc modules, which creates a warning
-    device_click_rectangle(246, 269, 77, 73)
     if got_ganked == 1:
         print('got ganked')
+        escape_autopilot()
         ding_when_ganked()
         save_screenshot()
+    else:
+        return_autopilot()
     device_update_cs()
 
-    print(' \tchecking if dead')
-    in_station = get_is_in_station()
-    is_capsule = get_is_capsule()
-    if is_capsule or in_station:
-        print('seems to be dead')
-        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
-        absolutely_professional_database.write(
-            get_name() + ' died at:' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)) + '\n\n')
-        absolutely_professional_database.close()
-        quit()
-    else:
-        print('going home')
-        # wait until autopilot gone
-        wait_end_navigation(20)
-
-        # catch notification window
-        for i in range(10):
-            if get_is_in_station() == 0:
-                close_pop_ups()
-            else:
-                break
-            time.sleep(2)
-
-        print('arriving')
-        # dump ressources
-        farm_tracker()
-        global inv_dump_time
-        if inv_dump_time > time.time() + 10000:
-            inv_dump_time = time.time()
-            dump_both()
+    # catch notification window
+    for i in range(10):
+        if get_is_in_station() == 0:
+            close_pop_ups()
         else:
-            if get_cargo() > 0:
-                dump_ore()
-        # repeat?
+            break
+        time.sleep(2)
+
+    print('arriving')
+    # dump ressources
+    farm_tracker()
+    global inv_dump_time
+    if inv_dump_time > time.time() + 10000:
+        inv_dump_time = time.time()
+        dump_both()
+    else:
+        if get_cargo() > 0:
+            dump_ore()
+    # repeat?
     if get_repeat() == 0:
         playsound(Path_to_script + 'assets\\sounds\\bell.wav')
         quit()

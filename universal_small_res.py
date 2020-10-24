@@ -743,6 +743,9 @@ def device_toggle_eco_mode():
         # ding_when_ganked()
     print('\t\ttoggle eco mode to: ', eco_mode)
     # subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\toggle_eco_" + name + ".ahk"])
+def device_record_video():
+    print('device_record_video')
+    subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\recording_" + name + ".ahk"])
 def device_update_cs():
     print('\t\t\tdevice_update_cs()')
     global CS_cv, CS, CS_image
@@ -1030,6 +1033,8 @@ def set_pi_planet_for_autopilot(target):
     # device_click_circle(925, 30, 15)
     time.sleep(5)
 def escape_autopilot():
+    activate_autopilot(1)
+    device_record_video()
     print('\tescape_autopilot()')
     if get_eco_mode():
         device_toggle_eco_mode()
@@ -1040,7 +1045,32 @@ def escape_autopilot():
     time.sleep(2)
     deactivate_the_modules('prop')
     activate_the_modules('esc')
-    device_click_rectangle(246, 269, 77, 73)
+    device_click_rectangle(465, 431, 32, 5)
+
+    for i in range(20):
+        device_update_cs()
+        if get_speed() > 80:
+            break
+        time.sleep(1)
+
+    print(' \tchecking if dead')
+    in_station = get_is_in_station()
+    is_capsule = get_is_capsule()
+    if is_capsule or in_station:
+        print('seems to be dead')
+        absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+        absolutely_professional_database.write(
+            get_name() + ' died at:' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1347517370)) + '\n\n')
+        absolutely_professional_database.close()
+        quit()
+    else:
+        print('going home')
+        # wait until autopilot gone
+        wait_end_navigation(20)
+def return_autopilot():
+    activate_autopilot(1)
+    wait_end_navigation(20)
+
 def wait_end_navigation(safety_time=20):
     print('\t\twait_end_navigation()')
     while 1:
