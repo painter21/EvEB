@@ -1016,8 +1016,10 @@ def reset():
     wait_end_navigation()
     if get_is_in_station():
         os.system("start E:\Eve_Echoes\Bot\\ahk_scripts\start_bat_" + get_name() + ".ahk")
+        quit()
     else:
         hard_reset()
+    quit()
 def hard_reset():
     # for /f "tokens=3,*" %a in ('tasklist /fo list /v ^| find "Window Title"') do @if not "%a"=="N/A" echo %a %b
     os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Kort Foster\" /T")
@@ -1067,18 +1069,15 @@ def set_pi_planet_for_autopilot(target):
     time.sleep(5)
 def escape_autopilot():
     activate_autopilot(1)
-    device_record_video()
     print('\tescape_autopilot()')
-    if get_eco_mode():
-        device_toggle_eco_mode()
-    time.sleep(1)
+    device_record_video()
+    activate_the_modules('esc')
+    deactivate_the_modules('prop')
     device_update_cs()
     repair(100)
-    activate_autopilot(0)
     time.sleep(1)
-    deactivate_the_modules('prop')
-    activate_the_modules('esc')
     device_click_rectangle(465, 431, 32, 5)
+    activate_autopilot(0)
 
     for i in range(20):
         device_update_cs()
