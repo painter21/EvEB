@@ -791,10 +791,20 @@ def device_update_cs():
 def device_click_filter_block():
     print('\t\t\tdevice_click_filter_block()')
     device_click_rectangle(740, 46, 161, 269)
+def close_select_target_popup():
+    if compare_colors(get_cs_cv()[67][627], [83, 91, 46, 255]) < 2 and \
+         compare_colors(get_cs_cv()[38][627], [83, 91, 46, 255]) < 4:
+        device_click_circle(883, 54, 16)
+        time.sleep(1)
+        device_update_cs()
 def close_pop_ups():
     print('\t\t\tclick_close_for_full_window()')
     started = 0
     stopped = 0
+    device_update_cs()
+
+    close_select_target_popup()
+
     for i in range(10):
         device_update_cs()
         if get_inventory_open():
@@ -1069,6 +1079,7 @@ def set_pi_planet_for_autopilot(target):
     time.sleep(5)
 def escape_autopilot():
     activate_autopilot(1)
+    ding_when_ganked()
     print('\tescape_autopilot()')
     device_record_video()
     activate_the_modules('esc')

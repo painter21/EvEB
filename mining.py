@@ -112,6 +112,7 @@ def get_list_asteroid():
 def wait_and_watch_out(sec=0):
     print('\twait_and_watch_out')
     device_update_cs()
+    close_select_target_popup()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
         if get_bait() == 1:
             subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
@@ -438,7 +439,6 @@ def mining_return(got_ganked):
     if got_ganked == 1:
         print('got ganked')
         escape_autopilot()
-        ding_when_ganked()
         save_screenshot()
     else:
         return_autopilot()
@@ -516,7 +516,14 @@ def mining_from_station_in_null():
 def main():
     mining_from_station()
 def custom():
-    get_filter_pos()
+    while 1:
+        device_update_cs()
+        print(get_cs_cv()[38][627])
+        print(compare_colors(get_cs_cv()[38][627], [83, 91, 46, 255]))
+        print(compare_colors(get_cs_cv()[67][627], [83, 91, 46, 255]))
+        add_point(627, 38)
+        show_image()
+        time.sleep(2)
 
 
 read_config_file()
