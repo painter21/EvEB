@@ -298,8 +298,8 @@ def get_autopilot():
     return 0
 def get_autopilot_active():
     x_c, y_c = 26, 121
-    add_point(x_c, y_c)
-    show_image()
+    # add_point(x_c, y_c)
+    # show_image()
     if compare_colors(CS_image[y_c][x_c], inner_autopilot_green) < 13:
         print('\t\t\tget_autopilot_active(): ', 1)
         return 1
@@ -1036,6 +1036,7 @@ def escape_autopilot():
     if get_eco_mode():
         device_toggle_eco_mode()
     time.sleep(1)
+    save_screenshot()
     device_update_cs()
     repair(100)
     activate_autopilot(0)

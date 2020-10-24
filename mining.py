@@ -28,11 +28,16 @@ def lock_asteroid(ast2):
         time.sleep(1)
     device_click_rectangle(ast2[1], ast2[2], ast2[3], ast2[4])
     time.sleep(0.5)
+    # device_update_cs()
+    # add_rectangle(ast2[1], ast2[2], ast2[3], ast2[4])
+    # add_rectangle(ast2[1] - 185, min(320, ast2[2]), ast2[3], ast2[4])
+    # show_image()
     device_click_rectangle(ast2[1] - 185, min(320, ast2[2]), ast2[3], ast2[4])
 def approach_and_start_harvest():
     # return 0: all fine, return 1: found no asteroid
     print('\t\t:approach_and_start_harvest')
     target_action(1, 2, 8)
+    activate_the_modules('prop')
     the_module = None
     for module in get_module_list():
         if module[1] == 'harvest':
@@ -46,6 +51,7 @@ def approach_and_start_harvest():
             activate_the_modules('harvest')
             return 0
         wait_and_watch_out(10)
+    deactivate_the_modules('prop')
     return 1
 def image_read_asteroid(image1):
     print('\t\timage_read_asteroid()')
@@ -236,7 +242,6 @@ def mining_from_station():
 def mine():
     # returns 0: everything all right, 1: asteroid belt empty, not in asteroid belt
     print('\tlock_multiple_good_asteroids()')
-    activate_the_modules('prop')
     set_filter('inin', 0)
     count = 0
 
@@ -519,10 +524,9 @@ def mining_from_station_in_null():
 def main():
     mining_from_station()
 def custom():
-    while 1:
-        time.sleep(2)
-        device_update_cs()
-        print(get_autopilot_active())
+    update_modules()
+    mine()
+
 
 read_config_file()
 config_uni()
