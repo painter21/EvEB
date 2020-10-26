@@ -482,9 +482,9 @@ def get_module_is_active(module):
         return 0
     activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
-    add_rectangle(x, y, 0, 0)
+    # add_rectangle(x, y, 0, 0)
     # print(compare_colors(CS_image[y][x], activate_blue))
-    if compare_colors(CS_image[y][x], activate_blue) < 25:
+    if compare_colors(CS_image[y][x], activate_blue) < 25 or compare_colors(CS_image[y+1][x], activate_blue) < 25 or compare_colors(CS_image[y-1][x], activate_blue) < 25:
         print('\t\t\tget_module_is_active():', module[0], 1)
         return 1
     print('\t\t\tget_module_is_active():', module[0], 0)
@@ -991,7 +991,7 @@ def set_filter(string_in_name, force):
         if string_in_name in 'esc':
             device_click_rectangle(731, 338, 180, 45)
             device_update_cs()
-            if check_for_lock_on_police():
+            if check_for_confirm_window():
                 time.sleep(2)
                 device_click_rectangle(731, 338, 180, 45)
             return
@@ -1032,10 +1032,13 @@ def reset():
     quit()
 def hard_reset():
     # for /f "tokens=3,*" %a in ('tasklist /fo list /v ^| find "Window Title"') do @if not "%a"=="N/A" echo %a %b
-    os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Kort Foster\" /T")
-    os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
+    # os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Kort Foster\" /T")
+    # os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
+    subprocess.call(
+        ["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\close_" + name + ".ahk"])
     playsound(path_to_script + 'assets\\sounds\\bell.wav')
     notify_whatsapp()
+    print(get_name())
     quit()
 def set_home():
     print('\t\tset_home()')
@@ -1081,7 +1084,7 @@ def escape_autopilot():
     activate_autopilot(1)
     ding_when_ganked()
     print('\tescape_autopilot()')
-    device_record_video()
+    # device_record_video()
     activate_the_modules('esc')
     deactivate_the_modules('prop')
     device_update_cs()
@@ -1135,7 +1138,7 @@ def wait_end_navigation(safety_time=20):
         activate_autopilot(0)
         time.sleep(safety_time)
 # special stuff
-def check_for_lock_on_police():
+def check_for_confirm_window():
     print('\t\tcheck_for_lock_on_police()')
     x_a, y_a, x_b, y_b = 804, 408, 804, 387
     # check if autopilot is online (2 pixels because safety)

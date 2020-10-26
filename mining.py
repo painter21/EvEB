@@ -19,6 +19,7 @@ def read_config_file():
 start_program_time = time.time()
 inv_dump_time = time.time()
 time_farming = time.time()
+previous_belt = 0
 total_cargo = 0
 
 # INTERFACE HELPER
@@ -113,6 +114,7 @@ def wait_and_watch_out(sec=0):
     print('\twait_and_watch_out')
     device_update_cs()
     close_select_target_popup()
+    check_for_confirm_window()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
         if get_bait() == 1:
             subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
@@ -195,7 +197,38 @@ def loot():
                 not_stop = 0
         device_update_cs()
         tmp = get_filter_icon('wreck')
+def coop_warp():
+    global previous_belt
+    set_filter('esc', 0)
 
+    time.sleep(2)
+    device_update_cs()
+    asteroid_belts = get_filter_list_size()
+    if asteroid_belts == 0:
+        set_home()
+        activate_autopilot()
+        time.sleep(300)
+        mining_from_station()
+        quit()
+    else:
+        if asteroid_belts == 1 or get_name() == 'bronson':
+            warp_in_system_handling(1, 0, 1, 'ining')
+        else:
+            if get_name() == 'kort':
+                warp_in_system_handling(asteroid_belts, 0, 1, 'ining')
+            else:
+                warp_in_system_handling(randint(1, asteroid_belts), 0, 1, 'ining')
+def solo_warp():
+    global previous_belt
+    set_filter('esc', 0)
+
+    time.sleep(2)
+    device_update_cs()
+    asteroid_belts = get_filter_list_size()
+    previous_belt += 1
+    if previous_belt >= asteroid_belts:
+        previous_belt = 1
+    warp_in_system_handling(previous_belt, 0, 1, 'ining')
 
 # STATES
 def mining_from_station():
@@ -208,26 +241,7 @@ def mining_from_station():
     activate_filter_window()
     time.sleep(1)
 
-    set_filter('esc', 0)
-
-    time.sleep(3)
-    # warp by pauls if
-    if 1:
-        asteroid_belts = get_filter_list_size()
-        if asteroid_belts == 0:
-            set_home()
-            activate_autopilot()
-            time.sleep(300)
-            mining_from_station()
-            quit()
-        else:
-            if asteroid_belts == 1 or get_name() == 'bronson':
-                warp_in_system_handling(1, 0, 1, 'ining')
-            else:
-                if get_name() == 'kort':
-                    warp_in_system_handling(asteroid_belts, 0, 1, 'ining')
-                else:
-                    warp_in_system_handling(randint(1, asteroid_belts), 0, 1, 'ining')
+    solo_warp()
 
     while mine():
         set_filter('esc', 0)
@@ -441,6 +455,7 @@ def mining_return(got_ganked):
         escape_autopilot()
         save_screenshot()
     else:
+        deactivate_the_modules('harvest')
         return_autopilot()
     device_update_cs()
 

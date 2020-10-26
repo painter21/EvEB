@@ -1,5 +1,6 @@
 stab esc 7 7
 extender esc 13 13
+plate esc 11 11
 afterburner prop 5 13
 drive prop 10 13
 miner harvest 17 4
