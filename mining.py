@@ -487,7 +487,9 @@ def mining_return(got_ganked):
         quit()
     if got_ganked == 1:
         print('waiting ' + str(safety_time) + 's')
-        time.sleep(get_safety_time())
+        for i in range(safety_time/60):
+            observer_update()
+            time.sleep(60)
 
     for i in range(10):
         if get_is_in_station() == 0:
