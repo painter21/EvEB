@@ -46,6 +46,7 @@ def approach_and_start_harvest():
             break
 
     for i in range(20):
+        observer_update()
         activate_module(the_module)
         wait_and_watch_out(4)
         if get_module_is_active(the_module):
@@ -113,6 +114,7 @@ def get_list_asteroid():
 def wait_and_watch_out(sec=0):
     print('\twait_and_watch_out')
     device_update_cs()
+    observer_update()
     close_select_target_popup()
     check_for_confirm_window()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
@@ -183,6 +185,7 @@ def loot():
     wait_and_watch_out(2)
 
     while tmp != 0:
+        observer_update()
         filter_action(1, 2, 5)
 
         not_stop = 1
@@ -233,6 +236,7 @@ def solo_warp():
 # STATES
 def mining_from_station():
     print('\tmining_from_station()')
+    observer_update()
     if start_program_time + 10800 < time.time():
         os.system(
             "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
@@ -453,7 +457,6 @@ def mining_return(got_ganked):
     if got_ganked == 1:
         print('got ganked')
         escape_autopilot()
-        save_screenshot()
     else:
         deactivate_the_modules('harvest')
         return_autopilot()
@@ -461,6 +464,7 @@ def mining_return(got_ganked):
 
     # catch notification window
     for i in range(10):
+        observer_update()
         if get_is_in_station() == 0:
             close_pop_ups()
         else:
@@ -531,14 +535,7 @@ def mining_from_station_in_null():
 def main():
     mining_from_station()
 def custom():
-    while 1:
-        device_update_cs()
-        print(get_cs_cv()[38][627])
-        print(compare_colors(get_cs_cv()[38][627], [83, 91, 46, 255]))
-        print(compare_colors(get_cs_cv()[67][627], [83, 91, 46, 255]))
-        add_point(627, 38)
-        show_image()
-        time.sleep(2)
+    device_update_cs()
 
 
 read_config_file()

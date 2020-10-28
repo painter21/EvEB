@@ -559,6 +559,12 @@ def log(something_to_write):
     absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
     absolutely_professional_database.write(something_to_write + "\n\n")
     absolutely_professional_database.close()
+def observer_update():
+    print('\t\tobserver_update()')
+    absolutely_professional_database = open(path + 'to_observe.txt', 'w')
+    absolutely_professional_database.write(str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)) + "\n\n")
+    absolutely_professional_database.close()
+
 def interface_show_player():
     print('\t\tinterface_show_player')
     x, y, h, w = 66, 1, 87, 127
@@ -1005,6 +1011,7 @@ def set_filter(string_in_name, force):
     # cv.waitKey()
 # longer
 def reset():
+    observer_update()
     save_screenshot()
     log('reset: ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)))
     # does the screen react?  open and close inventory
@@ -1034,6 +1041,8 @@ def hard_reset():
     # for /f "tokens=3,*" %a in ('tasklist /fo list /v ^| find "Window Title"') do @if not "%a"=="N/A" echo %a %b
     # os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Kort Foster\" /T")
     # os.system("cmd /k Taskkill /F /FI \"WindowTitle eq Bronson Barton\" /T")
+    ding_when_ganked()
+    ding_when_ganked()
     subprocess.call(
         ["D:\Program Files\AutoHotkey\AutoHotkey.exe", "E:\\Eve_Echoes\\Bot\\ahk_scripts\\close_" + name + ".ahk"])
     playsound(path_to_script + 'assets\\sounds\\bell.wav')
@@ -1082,8 +1091,9 @@ def set_pi_planet_for_autopilot(target):
     time.sleep(5)
 def escape_autopilot():
     activate_autopilot(1)
-    ding_when_ganked()
     print('\tescape_autopilot()')
+    save_screenshot()
+    ding_when_ganked()
     # device_record_video()
     activate_the_modules('esc')
     deactivate_the_modules('prop')
@@ -1121,6 +1131,7 @@ def return_autopilot():
 def wait_end_navigation(safety_time=20):
     print('\t\twait_end_navigation()')
     while 1:
+        observer_update()
         device_update_cs()
         if not get_autopilot():
             if get_is_in_station():
@@ -1208,12 +1219,15 @@ def undock_and_modules(error_count=0):
             save_screenshot('kill')
             log(get_name() + ' got destroyed. ')
             set_home()
-            activate_autopilot()
+            activate_autopilot(1)
+            ding_when_ganked()
+            ding_when_ganked()
             notify_whatsapp()
             quit()
         log(get_name() + ' no modules, try again.')
         set_home()
         activate_autopilot()
+        observer_update()
         wait_end_navigation()
         undock_and_modules(error_count+1)
     speed_x, speed_y = 460, 495
@@ -1221,10 +1235,12 @@ def undock_and_modules(error_count=0):
     if get_cs_cv()[speed_y][speed_x][2] < 130 or len(ModuleList) < 2:
         # re dock
         time.sleep(10)
+        observer_update()
         set_home()
         time.sleep(5)
         device_click_circle(22, 116, 10)
         time.sleep(25)
+        observer_update()
         undock_and_modules()
         return
 
