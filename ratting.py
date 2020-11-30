@@ -45,6 +45,7 @@ def farm_tracker(inv_value):
     absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
     absolutely_professional_database.write(string)
     absolutely_professional_database.close()
+    time.sleep(2)
 def choose_anomaly():
     print('\tchoose_anomaly()')
     base_level = 0
@@ -194,19 +195,22 @@ def get_list_anomaly():
                     device_click_filter_block()
                     save_screenshot()
                 else:
-                    if 'mall' in raw_text:
-                        list_ano.append(['small', lvl, filter_list_nr])
+                    if 'aunt' in raw_text:
+                        list_ano.append(['haunted', lvl, filter_list_nr])
                     else:
-                        if 'edium' in raw_text:
-                            list_ano.append(['medium', lvl, filter_list_nr])
+                        if 'mall' in raw_text:
+                            list_ano.append(['small', lvl, filter_list_nr])
                         else:
-                            if 'arge' in raw_text:
-                                list_ano.append(['large', lvl, filter_list_nr])
+                            if 'edium' in raw_text:
+                                list_ano.append(['medium', lvl, filter_list_nr])
                             else:
-                                if 'Bas' in raw_text:
-                                    list_ano.append(['base', lvl, filter_list_nr])
+                                if 'arge' in raw_text:
+                                    list_ano.append(['large', lvl, filter_list_nr])
                                 else:
-                                    list_ano.append(['unknown', lvl, filter_list_nr])
+                                    if 'Bas' in raw_text:
+                                        list_ano.append(['base', lvl, filter_list_nr])
+                                    else:
+                                        list_ano.append(['unknown', lvl, filter_list_nr])
     for ano in list_ano:
         print(ano)
     return list_ano
@@ -270,11 +274,15 @@ def warp_to_ano():
     print(anomaly)
     # sometimes the interface times out and i have to reopen it
     device_click_filter_block()
-    tmp = warp_in_system(anomaly[2], preferredOrbit, 0)
+    tmp = warp_in_system(anomaly[2], preferredOrbit, 0, 'PvE')
     if tmp == 1:
-        warp_and_hide()
+        warp_and_hide(1)
     if tmp == 2:
         escape_autopilot()
+    if anomaly[0] == 'haunted':
+        filter_action(1, 1, 2)
+        time.sleep(3)
+        warp_wait()
 
     # swap to PvE
 def danger_handling_combat():
@@ -355,7 +363,7 @@ def loot():
         # find and click wreck icon in filter bar
         tmp = get_filter_icon('wreck')
         if tmp == 0:
-            if get_cargo() > 10:
+            if get_cargo() > 90:
                 combat_return(0)
             else:
                 warp_to_ano()
@@ -380,11 +388,12 @@ def loot():
 
         tmp = get_filter_icon('wreck')
         if tmp == 0:
-            if get_cargo() > 10:
+            if get_cargo() > 70:
                 set_home()
                 combat_return(0)
             else:
                 print('site done')
+                ding_when_ganked()
                 warp_to_ano()
                 combat()
                 return
@@ -428,10 +437,10 @@ def combat():
 
             # cd items
             if tmp_cd < time.time():
-                if activate_the_modules('cd'):
+                if activate_the_modules('cd') or activate_the_modules('ewar'):
                     tmp_cd = time.time() + 90
                     # 0815 ewar
-                    activate_the_modules('ewar')
+
 
             # todo: improve ewar?
 
@@ -483,17 +492,16 @@ def combat_return(got_ganked):
 
 # STARTS
 def main():
-    interface_show_player()
     combat_start_from_station()
 def custom():
-    time.sleep(3)
-    device_update_cs()
     update_modules()
+    time.sleep(2)
+    device_update_cs()
     combat()
 
 read_config_file()
 config_uni()
-farm_tracker(0)
+# farm_tracker(0)
 if get_start() == 'main':
     main()
 if get_start() == 'custom':

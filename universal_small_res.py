@@ -188,6 +188,7 @@ def update_modules():
     # cv.imshow('tmp', CS_cv)
     # cv.waitKey()
     print(str(len(ModuleList)) + ' Modules found')
+    print(ModuleList)
 def config_uni():
     read_config_file_uni()
     calc_hp_pos()
@@ -261,32 +262,34 @@ def get_speed():
     print('\t\t\tget_speed():', 100)
     return 100
 def get_cargo():
-    steps = 33
-    x, y, w = 3, 61, 85 / steps
+    steps = 36
+    x, y, w = 1, 101, 71 / steps
     # 0.55 match, 0.69 no match
-    old_color = CS_image[y][x]
+    old_color = CS_image[y][x+1]
     for i in range(steps):
         i += 1
         new_color = CS_image[y][int(x + (i * w))]
-        # cv.rectangle(CS_cv, (int(x + (i * w)), y), (int(x + (i * w)), y), color=(0, 255, i * 10), thickness=1, lineType=cv.LINE_4)
         # print(compare_colors(new_color, old_color), new_color)
         if compare_colors(new_color, old_color) > 9:
             result = int(100 * (i-1) / steps)
             print('\t\t\tget_cargo(): ', result)
             return result
         old_color = new_color
-    # cv.imshow('image', CS_cv)
-    # cv.waitKey(0)
+        # cv.rectangle(CS_cv, (int(x + (i * w)), y), (int(x + (i * w)), y), color=(0, 255, i * 10), thickness=1, lineType=cv.LINE_4)
+    # show_image()
     # no contrast in there, have to work with colors:
-    cargo_yellow = [52, 47, 26, 255]
-    # print(CS_image[y][int(x + ((steps-1) * w))],  CS_image[y][int(x + (steps * w) + 7)], cargo_yellow, compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_yellow))
-    if compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_yellow) < 10:
+    cargo_green = [31, 82, 68, 255]
+    # print(CS_image[y][int(x + ((steps-1) * w))],  CS_image[y][int(x + (steps * w) + 7)], cargo_green, compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_green))
+    if compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_green) < 10:
         print('\t\t\tget_cargo(): ', 100)
         return 100
     print('\t\t\tget_cargo(): ', 0)
     return 0
 def get_autopilot():
-    x_a, y_a, x_b, y_b = 43, 102, 43, 127
+    x_a, y_a, x_b, y_b = 43, 112, 43, 137
+    #add_rectangle(x_a, y_a, 0, 3)
+    #add_rectangle(x_b, y_b, 0, 3)
+    #show_image()
     # check if autopilot is online (2 pixels because safety)
     if compare_colors(CS_image[y_a][x_a], outer_autopilot_green) < 10 and \
             compare_colors(CS_image[y_b][x_b], outer_autopilot_green) < 10:
@@ -295,7 +298,7 @@ def get_autopilot():
     print('\t\t\tget_autopilot(): ', 0)
     return 0
 def get_autopilot_active():
-    x_c, y_c = 26, 121
+    x_c, y_c = 22, 130
     # add_point(x_c, y_c)
     # show_image()
     if compare_colors(CS_image[y_c][x_c], inner_autopilot_green) < 13:
@@ -366,7 +369,7 @@ def get_filter_icon(filter_name):
             min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
             border = 0.99
             if ship == 'cruiser':
-                border = 0.975
+                border = 0.985
             if filter_name == 'npc':
                 border = 0.89
             print('\t\t\ticon, max, border: ', icon_file, max_val, border)
@@ -491,13 +494,12 @@ def get_module_is_active(module):
     # show_image(0, 0)
     return 0
 # combined
+#todo
 def get_inventory_value_small_screen(to_open):
     print('\t\t\tget_inventory_value_small_screen()')
     x, y, w, h = 327, 492, 180, 26
     if to_open:
-        # open inventory
-        device_click_rectangle(5, 61, 83, 26)
-        time.sleep(1.5)
+        open_inventory()
         device_update_cs()
     crop_img = CS_cv[y:y + h, x:x + w]
     # show_image(crop_img, 1)
@@ -508,6 +510,7 @@ def get_inventory_value_small_screen(to_open):
         device_click_circle(926, 30, 10)
     print('\t\t\tcurrent inventory value: ', int(raw_text))
     return int(raw_text)
+#todo
 def get_wallet_balance():
     print('\t\t\tget_wallet_balance()')
     device_click_rectangle(95, 60, 84, 28)
@@ -743,7 +746,10 @@ def filter_swipe(direction):
     if direction == 0:
         device_swipe_from_circle(822, 493, 20, 400, 3)
         return
-    device_swipe_from_circle(822, 100, 20, 400, 1)
+    device_swipe_from_circle(822, 100, 20, 400, 1)#
+def open_inventory():
+    device_click_rectangle(11, 70, 61, 30)
+    time.sleep(1.5)
 # longer
 def catch_bad_eco_mode(expected_autopilot_status):
     time.sleep(5)
@@ -840,16 +846,12 @@ def activate_filter_window():
     print('\t\tactivate_filter_window()', 0)
     return 0
 def dump_items():
-    # open inventory
-    device_click_rectangle(5, 61, 83, 26)
-    time.sleep(1.5)
+    open_inventory()
     # print('\t\tdump_items()', int(dump_tail()))
     # return int(dump_tail())
 def dump_both():
     print('\t\tdump_ore()')
-    # open inventory
-    device_click_rectangle(5, 61, 83, 26)
-    time.sleep(1.5)
+    open_inventory()
 
     # venture ore
     device_click_rectangle(18, 393, 173, 41)
@@ -882,9 +884,7 @@ def dump_both():
     device_click_circle(926, 30, 10)
 def dump_ore():
     print('\t\tdump_ore()')
-    # open inventory
-    device_click_rectangle(5, 61, 83, 26)
-    time.sleep(1.5)
+    open_inventory()
     # venture ore
     device_click_rectangle(18, 393, 173, 41)
     time.sleep(1.5)
@@ -919,11 +919,11 @@ def dump_tail():
 def activate_autopilot(force_click=0):
     print('\t\tactivate_autopilot()', force_click)
     if force_click:
-        device_click_circle(22, 116, 10)
+        device_click_circle(19, 127, 10)
         return
     if get_autopilot():
         if not get_autopilot_active():
-            device_click_circle(22, 116, 10)
+            device_click_circle(19, 127, 10)
             return
 # todo does sometimes get info window in eco mode
 def activate_module(module):
@@ -1015,7 +1015,7 @@ def reset():
     save_screenshot()
     log('reset: ' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)))
     # does the screen react?  open and close inventory
-    device_click_rectangle(5, 61, 83, 26)
+    open_inventory()
     for i in range(5):
         time.sleep(1.5)
         device_update_cs()
@@ -1051,9 +1051,7 @@ def hard_reset():
     quit()
 def set_home():
     print('\t\tset_home()')
-    # open inventory
-    device_click_rectangle(5, 61, 83, 26)
-    time.sleep(1.5)
+    open_inventory()
     # click on assets
     device_click_rectangle(12, 493, 182, 36)
     time.sleep(2.5)

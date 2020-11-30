@@ -119,14 +119,14 @@ def wait_and_watch_out(sec=0):
     check_for_confirm_window()
     if get_filter_icon('all_ships') != 0 or get_criminal() != 0:
         if get_bait() == 1:
-            subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
-                             "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
-            playsound(Path_to_script + 'assets\\sounds\\bell.wav')
-            print('trap card activated')
-            device_toggle_eco_mode()
-            time.sleep(3)
-            mining_return(1)
-            quit()
+            # subprocess.call(["D:\Program Files\AutoHotkey\AutoHotkey.exe",
+            #                  "E:\\Eve_Echoes\\Bot\\ahk_scripts\\call_paul.ahk"])
+            # playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+            # print('trap card activated')
+            # device_toggle_eco_mode()
+            # time.sleep(3)
+            ding_when_ganked()
+            time.sleep(7)
         mining_return(1)
         quit()
     for i in range(int(sec/2)):
@@ -234,13 +234,14 @@ def solo_warp():
     warp_in_system_handling(previous_belt, 0, 1, 'ining')
 
 # STATES
+# todo: stop after 3 h commented out
 def mining_from_station():
     print('\tmining_from_station()')
     observer_update()
-    if start_program_time + 10800 < time.time():
-        os.system(
-            "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
-        quit()
+    # if start_program_time + 10800 < time.time():
+        # os.system(
+        #     "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
+        # quit()
     undock_and_modules()
     activate_filter_window()
     time.sleep(1)
@@ -357,12 +358,12 @@ def mine():
                     lock_asteroid(ast2)
                     count += 1
 
-            if count == 6:
+            if count == 4:
                 break
             tmp = file.readline().strip()
         file.close()
 
-        if count < 6:
+        if count < 4:
             current = count
             wait_and_watch_out(4)
             # swipe down
@@ -383,7 +384,7 @@ def mine():
                         lock_asteroid(ast2)
                         count += 1
 
-                if count == 6:
+                if count == 4:
                     break
                 tmp = file.readline().strip()
             # sometimes, it does not find anything on the second page and te menue stays open, this is to prevent that
@@ -487,7 +488,7 @@ def mining_return(got_ganked):
         quit()
     if got_ganked == 1:
         print('waiting ' + str(safety_time) + 's')
-        for i in range(safety_time/60):
+        for i in range(int(safety_time/60)):
             observer_update()
             time.sleep(60)
 
@@ -538,6 +539,7 @@ def main():
     mining_from_station()
 def custom():
     device_update_cs()
+    get_cargo()
 
 
 read_config_file()

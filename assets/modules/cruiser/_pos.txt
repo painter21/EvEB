@@ -8,4 +8,7 @@ rep rep 14 14
 web ewar 12 -5
 drone cd 10 12
 weapon1 weapon 11 15
+weapon2 weapon 6 7
+weapon3 weapon 13 10
 drone3 drone 7 17
+painter ewar 16 4
