@@ -242,6 +242,10 @@ def mining_from_station():
         # os.system(
         #     "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
         # quit()
+
+    if get_cargo() > 10:
+        dump_ore()
+
     undock_and_modules()
     activate_filter_window()
     time.sleep(1)

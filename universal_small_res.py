@@ -280,7 +280,10 @@ def get_cargo():
     # no contrast in there, have to work with colors:
     cargo_green = [31, 82, 68, 255]
     # print(CS_image[y][int(x + ((steps-1) * w))],  CS_image[y][int(x + (steps * w) + 7)], cargo_green, compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_green))
-    if compare_colors(CS_image[y][int(x + (steps * w))] - CS_image[y][int(x + (steps * w) + 7)], cargo_green) < 10:
+    # print(CS_image[y-1][int(w*steps)], cargo_green, compare_colors(CS_image[y-1][int(x + w)], cargo_green))
+    # add_point(int(w*steps), y, 1)
+    # show_image()
+    if compare_colors(CS_image[y][int(w*steps)], cargo_green) < 10:
         print('\t\t\tget_cargo(): ', 100)
         return 100
     print('\t\t\tget_cargo(): ', 0)
@@ -529,7 +532,7 @@ def get_wallet_balance():
 # everything that creates a basic UI for the programmer
 def add_point(x, y, stroke_width=1):
     print('\t\t\tadd_point(): ', x, y)
-    cv.rectangle(CS_cv, (x, y), (x + 1, y + 1),
+    cv.rectangle(CS_cv, (x, y), (x, y),
                  color=(0, 255, 0), thickness=stroke_width, lineType=cv.LINE_4)
 def add_rectangle(x, y, w, h, stroke_width=2):
     print('\t\t\tadd_rectangle(): ', x, y, w, h)
