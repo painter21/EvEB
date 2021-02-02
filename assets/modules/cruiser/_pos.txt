@@ -7,8 +7,15 @@ miner harvest 17 4
 rep rep 14 14
 web ewar 12 -5
 drone cd 10 12
+dps3 cd -3 -15
 weapon1 weapon 11 15
 weapon2 weapon 6 7
 weapon3 weapon 13 10
+medexplodrone11	drone 4 8
+medrocket12 weapon 8 13
 drone3 drone 7 17
-painter ewar 16 4
+painter laser 16 4
+tracking2 cd 13 11
+scram6 ewar 3 13
+weapon12 weapon 10 6
+battery1 battery 6 8

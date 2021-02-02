@@ -1,5 +1,13 @@
 from universal_small_res import *
 Path_to_script = ''
+# variables
+if 1:
+    current_system = 'Start'
+    next_system = ""
+    solar_map = []
+    searching_path = []
+    ignore_inquis = 1
+    ignore_scouts = 1
 def read_config_file():
     print('\tread_config_file()')
     file = open('config.txt')
@@ -14,94 +22,160 @@ def read_config_file():
             set_path_to_script(Path_to_script)
         tmp = file.readline()
     file.close()
+def read_path_file():
+    print('\tread_path_file()')
+    file = open('path.txt')
+    tmp = file.readline().split()
+    while len(tmp) != 0:
+        if len(tmp) > 1:
+            tmp[1] = int(tmp[1])
+        searching_path.append(tmp)
+        tmp = file.readline().split()
+    print(searching_path)
+    file.close()
 
-def get_list_anomaly():
-    print('\t\tget_list_anomaly()')
-    # todo: it is way too inaccurate
-    # click filter element to expand filter
 
-    #filter swap should not be nessessary, only warp to ano calls it anyways
-    time.sleep(0.5)
+# todo: read map, write map
+def wait_jump():
+    time.sleep(7)
     device_update_cs()
-    list_ano = []
+    if get_speed() == 0:
+        return 1
+    for i in range(30):
+        device_update_cs()
+        if get_gate_cloak():
+            time.sleep(7)
+            device_update_cs()
+            return 0
+        else:
+            time.sleep(3)
+    device_update_cs()
+    if get_is_in_station() == 1:
+        main()
+    return 0
+def filter_stargate_warp(target_nbr, current_system_index=0):
 
+    gate_is_close = 0
+    if current_system_index > 1:
+        if searching_path[current_system_index][0] == searching_path[current_system_index - 2][0]:
+            gate_is_close = 1
 
-    # create a list of all anomaly locations (on screen)
-    x, y, w, h = 729, 51, 14, 475
-    img_ano = cv.imread(Path_to_script + 'assets\\filter_icons\\ano_left.png')
+    for i in range(3):
+        if gate_is_close:
+            filter_action(target_nbr, 2, 5)
+        else:
+            filter_action(target_nbr, 1, 2)
 
-    # show_image(img_ano, 1)
-    crop_img = get_cs_cv()[y:y + h, x:x + w]
-    crop_img = image_remove_dark(crop_img, 175)
-    # show_image(crop_img, 1)
-    result = cv.matchTemplate(crop_img, img_ano, cv.TM_CCORR_NORMED)
-    threshold = 0.8
-    loc = np.where(result >= threshold)
-    # black magic do not touch
-    previous_point_y = -10
-    for pt in zip(*loc[::-1]):
-        # ignore double results
-        if pt[1] > previous_point_y + 10:
-            previous_point_y = pt[1]
-            # add_rectangle(pt[0] + x, pt[1] + y, 0, 0)
+        print("should call wait jump")
+        if wait_jump() == 0:
+            return
 
-            # icon offset, size of text field
-            y_text, x_text = pt[1] - 12 + y, pt[0] + 65 + x
-            filter_list_nr = int((y_text + 12)/52)
-            if filter_list_nr > 1:
-                text_img = get_cs_cv()[y_text:y_text + 40, x_text:x_text + 120]
-                text_img = image_remove_dark(text_img, 200)
-                raw_text = tess.image_to_string(text_img)
-                # show_image(text_img, 1)
-                icon_img = text_img[5:15, 0:7]
-                # template gen
-                # remove darker pixels, seems to be a bad idea
-                # cv.imwrite('test.png', icon_img)
-
-                highest_result = 0
-                lvl = 0
-                for file in os.listdir(Path_to_script + 'assets\\base_level\\small\\'):
-                    lvl_icon = cv.imread(Path_to_script + 'assets\\base_level\\small\\' + file)
-                    result = cv.matchTemplate(icon_img, lvl_icon, cv.TM_CCORR_NORMED)
-                    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-                    if highest_result < max_val:
-                        highest_result = max_val
-                        lvl = int(file[:-4])
-                # print(lvl, raw_text.strip())
-                # show_image(icon_img, 1)
-
-                if 'Scout' in raw_text or 'nquis' in raw_text:
-                    print('found scout')
-                    playsound(Path_to_script + 'assets\\sounds\\bell.wav')
-                    device_click_filter_block()
-                    save_screenshot()
-                else:
-                    if 'aunt' in raw_text:
-                        list_ano.append(['haunted', lvl, filter_list_nr])
-                    else:
-                        if 'mall' in raw_text:
-                            list_ano.append(['small', lvl, filter_list_nr])
-                        else:
-                            if 'edium' in raw_text:
-                                list_ano.append(['medium', lvl, filter_list_nr])
-                            else:
-                                if 'arge' in raw_text:
-                                    list_ano.append(['large', lvl, filter_list_nr])
-                                else:
-                                    if 'Bas' in raw_text:
-                                        list_ano.append(['base', lvl, filter_list_nr])
-                                    else:
-                                        list_ano.append(['unknown', lvl, filter_list_nr])
-    for ano in list_ano:
-        print(ano)
-    return list_ano
-
-# STARTS
-def main():
+    for i in range(3):
+        if gate_is_close:
+            filter_action(target_nbr, 1, 2)
+        else:
+            filter_action(target_nbr, 2, 5)
+        if wait_jump() == 0:
+            return
     return
-def custom():
+def click_gate_icon():
+    # get stargate list: search the stargate icon and click on it
+    current_stargate_icon_location = get_filter_icon("stargate")
+    if current_stargate_icon_location == 0:
+        ding_when_ganked()
+        print('stargate icon not found, loaded too slowly, something else? (L.47 jumping)')
+        quit()
+    device_click_rectangle(current_stargate_icon_location[0] + 1, current_stargate_icon_location[1] + 1, 9, 13)
     device_update_cs()
-    get_list_anomaly()
+
+
+# maybe later useful
+def get_gates():
+    # todo: swap filter?
+
+    click_gate_icon()
+
+    # read all Gate Texts:
+    list_gate = []
+    x_start_filter_text = 793
+    x_estimated_text_size, y_estimated_text_size = 120, 25
+    for pixel_found in get_filter_pos():
+        text_img = get_cs_cv()[
+                   pixel_found[1]:pixel_found[1] + y_estimated_text_size,
+                   x_start_filter_text:x_start_filter_text + x_estimated_text_size]
+        raw_text = tess.image_to_string(text_img)
+        raw_text = ''.join([i for i in raw_text.strip() if not i.isdigit()])
+        if len(raw_text) < 2:
+            text_img = image_remove_dark(text_img, 200)
+            raw_text = tess.image_to_string(text_img)
+            raw_text = raw_text.strip().replace("\n", "")
+            raw_text = ''.join([i for i in raw_text if not i.isdigit()])
+        print(raw_text)
+        list_gate.append(raw_text)
+    return list_gate
+def write_map(string):
+    file = open(path + '\\map.txt', 'a')
+    file.write(string)
+    file.close()
+
+def main():
+    read_path_file()
+    if get_is_in_station():
+        undock_and_modules(expected_modules=0)
+        time.sleep(5)
+    activate_filter_window()
+    set_filter('Nav', 1, 0)
+    time.sleep(5)
+    for i in range(len(searching_path)):
+        print("\tcheck anomalies")
+        # check anomalies
+        device_update_cs()
+        get_list_anomaly()
+        print("\twarp to next system")
+        # warp to next path system
+        print("\t\tnext system", searching_path[i])
+        if len(searching_path[i]) == 2:
+            click_gate_icon()
+            filter_stargate_warp(searching_path[i][1], i)
+        else:
+            gate_list = get_gates()
+            # comparing strings and looking for best one
+            best_gate_nbr = 1
+            best_gate_score = -10
+            for gate_count in range(len(gate_list)):
+                if (tmp_score := compare_strings(gate_list[gate_count], searching_path[i][0])) > best_gate_score:
+                    best_gate_nbr = gate_count + 1
+                    best_gate_score = tmp_score
+                print('\t', searching_path[i][0], gate_list[gate_count], tmp_score)
+            if best_gate_score < -30:
+                ding_when_ganked()
+                print(searching_path[i], gate_list[best_gate_nbr], best_gate_score)
+                time.sleep(5)
+            time.sleep(1)
+            filter_stargate_warp(best_gate_nbr, i)
+        print('\n\nexpected system: ', searching_path[i])
+        print('found gatecloak, scanning new system')
+    set_home()
+    time.sleep(5)
+    device_update_cs()
+    activate_autopilot(force_click=1)
+
+    time.sleep(5)
+    device_update_cs()
+    if get_speed() < 20:
+        activate_autopilot()
+    for i in range(500):
+        device_update_cs()
+        if get_is_in_station():
+            main()
+        get_list_anomaly()
+        time.sleep(20)
+    ding_when_ganked()
+def custom():
+    set_home()
+    time.sleep(5)
+    device_update_cs()
+    activate_autopilot(force_click=1)
 
 
 read_config_file()

@@ -59,6 +59,12 @@ def read_config_file_uni():
         if tmp[0] == 'whatsapp':
             global whatsapp
             whatsapp = int(tmp[1])
+        if tmp[0] == "ignoreInquis":
+            global ignore_inquis
+            ignore_inquis = int(tmp[1])
+        if tmp[0] == "ignoreScouts":
+            global ignore_scouts
+            ignore_scouts = int(tmp[1])
         tmp = file.readline()
     file.close()
 
@@ -84,6 +90,8 @@ if 1:
     undock_yellow = [174, 147, 40, 255]
 
     # to be changed by user / fixed
+    ignore_scouts = 0
+    ignore_inquis = 0
     path = ''
     path_to_script = ''
     start = 'main'
@@ -99,6 +107,7 @@ if 1:
     home = 0
     bait = 0
     time_farming = time.time()
+    filter_block_click_time = time.time() -10
     # connect to Bluestacks
     Adb = Client(host='127.0.0.1', port=5037)
     Devices = Adb.devices()
@@ -150,7 +159,7 @@ def blockPrint():
     sys.stdout = open(os.devnull, 'w')
 
 # INTERNAL HELPER FUNCTIONS
-# big slow warum up functions
+# big slow warm up functions
 def update_modules():
     global ModuleList
     ModuleList = []
@@ -209,22 +218,31 @@ def config_uni():
 # READING
 # everything that reads the screen and returns something
 # fast
+def get_local_count():
+    # differs between 1 and 2 in local
+    print('\t\tget_local_count(): ')
+    x, y, w, h = 26, 432, 46, 25
+    crop_img = image_remove_dark(CS_cv[y:y + h, x:x + w], 130)
+    image_local_one = cv.imread(path_to_script + 'assets\\local_one.png')
+    if image_compare_text(crop_img, image_local_one) > 30:
+        return 2
+    return 1
 def get_hp():
     health_str, health_arm, health_shi = 0, 0, 0
     length_lists = len(health_st_list)
     for i in range(length_lists):
         pos = health_st_list[i]
-        if CS_image[pos[1]][pos[0]][2] > 90:
+        if CS_image[pos[1]][pos[0]][2] > 90 or CS_image[pos[1]+1][pos[0]][2] > 90:
             health_str = int(100-i*100/length_lists)
             break
     for i in range(length_lists):
         pos = health_ar_list[i]
-        if CS_image[pos[1]][pos[0]][2] > 90:
+        if CS_image[pos[1]][pos[0]][2] > 90 or CS_image[pos[1]+1][pos[0]][2] > 90:
             health_arm = int(100-i*100/length_lists)
             break
     for i in range(length_lists):
         pos = health_sh_list[i]
-        if CS_image[pos[1]][pos[0]][2] > 90:
+        if CS_image[pos[1]][pos[0]][2] > 90 or CS_image[pos[1]+1][pos[0]][2] > 90:
             health_shi = int(100-i*100/length_lists)
             break
     print('\t\t\tget_hp(): ', health_shi, health_arm, health_str)
@@ -290,15 +308,29 @@ def get_cargo():
     return 0
 def get_autopilot():
     x_a, y_a, x_b, y_b = 43, 112, 43, 137
-    #add_rectangle(x_a, y_a, 0, 3)
-    #add_rectangle(x_b, y_b, 0, 3)
-    #show_image()
+    # add_rectangle(x_a, y_a, 0, 3)
+    # add_rectangle(x_b, y_b, 0, 3)
+    # show_image()
     # check if autopilot is online (2 pixels because safety)
     if compare_colors(CS_image[y_a][x_a], outer_autopilot_green) < 10 and \
             compare_colors(CS_image[y_b][x_b], outer_autopilot_green) < 10:
         print('\t\t\tget_autopilot(): ', 1)
         return 1
     print('\t\t\tget_autopilot(): ', 0)
+    return 0
+def get_gate_cloak():
+    x_a, y_a, x_b, y_b = 479, 377, 479, 379
+    gate_cloak_green = [60, 200, 167, 255]
+    # print(CS_image[y_a][x_a], gate_cloak_green)
+    # add_point(x_a, y_a)
+    # add_point(x_b, y_b)
+    # show_image()
+    # check if autopilot is online (2 pixels because safety)
+    if compare_colors(CS_image[y_a][x_a], gate_cloak_green) < 10 and \
+            compare_colors(CS_image[y_b][x_b], gate_cloak_green) < 10:
+        print('\t\t\tget_gate_cloak(): ', 1)
+        return 1
+    print('\t\t\tget_gate_cloak(): ', 0)
     return 0
 def get_autopilot_active():
     x_c, y_c = 22, 130
@@ -361,6 +393,131 @@ def get_inventory_open():
     print('\t\t\tget_inventory_open(): ', 0)
     return 0
 # slow
+def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
+    print('\t\tget_list_anomaly()')
+    print(ignore_scouts, ignore_inquis)
+
+    if anom_icon_must_be_clicked:
+        current_anomaly_icon_location = get_filter_icon("anomaly")
+        if current_anomaly_icon_location == 0:
+            time.sleep(10)
+            current_anomaly_icon_location = get_filter_icon('anomaly')
+            if current_anomaly_icon_location == 0:
+                return 0
+
+        device_click_rectangle(current_anomaly_icon_location[0] + 1, current_anomaly_icon_location[1] + 1, 9, 13)
+        time.sleep(1)
+        device_update_cs()
+    # save_screenshot()
+    # click filter element to expand filter
+
+    if not just_visible:
+        device_click_filter_block()
+        filter_list = get_filter_pos()
+    else:
+        filter_list = get_filter_pos(0)
+
+    # filter swap should not be nessessary, only warp to ano calls it anyways
+    time.sleep(0.5)
+    list_ano = []
+    filter_list_nr = 0
+    for point in filter_list:
+        # generate code
+        code = []
+        for x in range(24):
+            score = 0
+            for y in range(9):
+                pixel = get_cs_cv()[point[1]+y][point[0]-x]
+                for color in pixel:
+                    score += color
+            code.append(score)
+        print(code)
+
+        filter_list_nr += 1
+        x_text = point[0] + 5
+        y_text = point[1] - 5
+        text_img = get_cs_cv()[y_text:y_text + 40, x_text:x_text + 120]
+        raw_text = tess.image_to_string(text_img)
+        raw_text = raw_text.strip().replace("\n", "")
+        if len(raw_text) < 4:
+            text_img = image_remove_dark(text_img, 200)
+            raw_text = tess.image_to_string(text_img)
+            raw_text = raw_text.strip().replace("\n", "")
+        # print(raw_text)
+        size_text = raw_text[:-5]
+        base_text = raw_text[-6:]
+        # print(size_text)
+        # show_image(text_img, 1)
+        icon_img = text_img[5:15, 0:7]
+        # template gen
+        # remove darker pixels, seems to be a bad idea
+        # cv.imwrite('test.png', icon_img)
+
+        highest_result = 0
+        lvl = 0
+        '''
+        for file in os.listdir('assets\\base_level\\small\\'):
+            lvl_icon = cv.imread('assets\\base_level\\small\\' + file)
+            result = cv.matchTemplate(icon_img, lvl_icon, cv.TM_CCORR_NORMED)
+            min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+            if highest_result < max_val:
+                highest_result = max_val
+                lvl = int(file[:-4])
+        # print(lvl, raw_text.strip())
+        # show_image(icon_img, 1)'''
+
+        base_anom = 0
+        margin = 35
+        if compare_strings('Base', base_text, 1) > margin or compare_strings('Ras', base_text, 1) > margin:
+            list_ano.append(['base', code, filter_list_nr, lvl, base_anom])
+        else:
+            if compare_strings('Deadspace', size_text, 1) > margin:
+                device_click_filter_block()
+                save_screenshot()
+                list_ano.append(['deadspace', code, filter_list_nr, lvl, base_anom])
+                for i in range(5):
+                    ding_when_ganked()
+                    ding_when_ganked()
+                    ding_when_ganked()
+                    time.sleep(2)
+            else:
+                if compare_strings('Inqusi', size_text, 1) > margin:
+                    save_screenshot()
+                    list_ano.append(['inquisitor', code, filter_list_nr, lvl, base_anom])
+                    if ignore_inquis == 0:
+                        ding_when_ganked()
+                else:
+                    if compare_strings('Scout', size_text, 1) > margin:
+                        print('found scout: ', raw_text)
+                        list_ano.append(['scout', lvl, filter_list_nr])
+                        if ignore_scouts == 0:
+                            ding_when_ganked()
+                        # time.sleep(5)
+                        # device_click_filter_block()
+                        save_screenshot()
+                    else:
+                        if compare_strings('Small', size_text, 1) > margin:
+                            list_ano.append(['small', code, filter_list_nr, lvl, base_anom])
+                        else:
+                            if compare_strings('Medium', size_text, 1) > margin:
+                                list_ano.append(['medium', code, filter_list_nr, lvl, base_anom])
+                            else:
+                                if compare_strings('Large', size_text, 1) > margin or compare_strings('Lorge', size_text, 1) > margin:
+                                    list_ano.append(['large', code, filter_list_nr, lvl, base_anom])
+                                else:
+                                    if compare_strings('Base', base_text, 1) > margin/3 or compare_strings('Ras', 1) > margin/3:
+                                        list_ano.append(['base', code, filter_list_nr, lvl, base_anom])
+                                    else:
+                                        list_ano.append(['unknown', code, filter_list_nr, lvl, base_anom])
+                                        print('unknown anom: ', raw_text)
+                                        # playsound(Path_to_script + 'assets\\sounds\\bell.wav')
+                                        # show_image(text_img, 1)
+                                        # time.sleep(5)
+
+            # print(list_ano[-1])
+    for ano in list_ano:
+        print(ano[0])
+    return list_ano
 def get_filter_icon(filter_name):
     print('\t\tget_filter_icon(): ', filter_name)
     x, y, w, h = 932, 40, 5, 277
@@ -395,9 +552,10 @@ def correct_filter_pos_point(x, y):
         if still_text == 0:
             return x, y-y_off+1
     return x, y - 20 + 1
-def get_filter_pos():
+def get_filter_pos(have_to_click_filter_block=1):
     print('\t\tget_filter_pos()')
-    device_click_filter_block()
+    if have_to_click_filter_block:
+        device_click_filter_block()
     time.sleep(0.4)
     device_update_cs()
     x, y, = 786, 41
@@ -406,7 +564,11 @@ def get_filter_pos():
     # print(abs(int(CS_cv[y+y_off][x][0]) - CS_cv[y+y_off][x+2][0]), abs(int(CS_cv[y+y_off][x+1][0] - CS_cv[y+y_off][x+2][0])))
     for y_off in range(540-y-23):
         if last_y + 50 < y+y_off:
-            if abs(int(CS_cv[y+y_off][x][0]) - CS_cv[y+y_off][x+2][0]) > 50 or abs(int(CS_cv[y+y_off][x+1][0]) - CS_cv[y+y_off][x+2][0]) > 50:
+            found_potential_upper_border = 0
+            for i in range(10):
+                if abs(int(CS_cv[y+y_off][x-i][0]) - CS_cv[y+y_off][x+2][0]) > 50:
+                    found_potential_upper_border = 1
+            if found_potential_upper_border:
                 tmp = correct_filter_pos_point(x, y+y_off)
                 # add_point(tmp[0], tmp[1])
                 last_y = tmp[1]
@@ -474,6 +636,7 @@ def get_tar_cross():
     print('\t\t\tget_tar_cross():', 1)
     return 1
 def get_module_is_active(module):
+    # todo: actie modules will pass deactiv test aswell as active test
     if module[1] == 'drone':
         # i doubt always getting the perfect center for drone modules, so we have to look out for the cross
         for i in range(5):
@@ -493,6 +656,10 @@ def get_module_is_active(module):
     if compare_colors(CS_image[y][x], activate_blue) < 25 or compare_colors(CS_image[y+1][x], activate_blue) < 25 or compare_colors(CS_image[y-1][x], activate_blue) < 25:
         print('\t\t\tget_module_is_active():', module[0], 1)
         return 1
+    else:
+        if compare_colors(CS_image[y][x], activate_red) < 25 or compare_colors(CS_image[y + 1][x], activate_red) < 25 or compare_colors(CS_image[y - 1][x], activate_red) < 25:
+            print('\t\t\tget_module_is_active():', module[0], 1)
+            return 2
     print('\t\t\tget_module_is_active():', module[0], 0)
     # show_image(0, 0)
     return 0
@@ -561,8 +728,8 @@ def ding_when_ganked():
     print('\t\tding_when_ganked() ', ding_when_ganked)
     if ding == 1:
         playsound(path_to_script + 'assets\\sounds\\bell.wav')
-def log(something_to_write):
-    absolutely_professional_database = open('E:\\Eve_Echoes\\Bot\\professional_database.txt', 'a')
+def log(something_to_write, link='E:\\Eve_Echoes\\Bot\\professional_database.txt'):
+    absolutely_professional_database = open(link, 'a')
     absolutely_professional_database.write(something_to_write + "\n\n")
     absolutely_professional_database.close()
 def observer_update():
@@ -664,6 +831,51 @@ def image_compare_text(image1, image2):
                 diff += 1
             count += 1
     return int(diff*10000/count)
+def image_compare(image1, image2, threshold=0):
+    # only the smaller image size will be tested
+    height_image2 = len(image2)
+    width_image2 = len(image2[0])
+    alpha_image2 = len(image2[0][0]) == 3
+
+    diff = 0
+    count = 0
+
+    if image2 == 'black':
+        for row in image1:
+            for pixel in row:
+                for color in pixel:
+                    diff += max(abs(int(pixel[2]) - threshold), 0)
+                    count += 1
+        return int(diff / count)
+
+    row_count = -1
+    for row in image1:
+        row_count += 1
+        pixel_count = -1
+        if pixel_count + 1 < height_image2:
+            for pixel in row:
+                pixel_count += 1
+
+                # print(pixel[2])
+                # print(image2[row_count][pixel_count][0])
+                value = max(abs(int(pixel[2]) - image2[row_count][pixel_count][0])-threshold, 0)
+                # print(value)
+                diff += value
+
+                # print(pixel[1])
+                # print(image2[row_count][pixel_count][1])
+                value = max(abs(int(pixel[1]) - image2[row_count][pixel_count][1]) - threshold, 0)
+                # print(value)
+                diff += value
+
+                # print(pixel[0])
+                # print(image2[row_count][pixel_count][2])
+                value = max(abs(int(pixel[0]) - image2[row_count][pixel_count][2]) - threshold, 0)
+                # print(value)
+                diff += value
+                count += 3
+                # print('')
+    return int(diff / count)
 def image_get_blur_brightness(x, y):
     print('\t\t\timage_get_blur_brightness()')
     brightness = 0
@@ -754,6 +966,89 @@ def open_inventory():
     device_click_rectangle(11, 70, 61, 30)
     time.sleep(1.5)
 # longer
+def check_if_blank_screen():
+    # check for blank screen
+    x, y, w, h = 517, 448, 18, 35
+    crop_img = CS_image[y:y + h, x:x + w]
+    image2 = cv.imread(path_to_script + 'assets\\blank.png')
+    value = image_compare(crop_img, image2)
+    value2 = image_compare(crop_img, 'black')
+    if value < 4 or value2 < 4:
+        while 1:
+            ding_when_ganked()
+    # todo:
+    # check for no screen change
+    # define a bunch of regularly changing pixels and check for changes on a 30 s cd
+    return 0
+def compare_strings(string_one, string_two, method=0):
+
+    # remove case sensitivity:
+    string_one = string_one.lower().strip()
+    string_two = string_two.lower().strip()
+
+    # method 0: negative score for differences
+    # method 1: only positive score for finding segments
+    # todo: good enough?
+    # checks word length aswell as single letters, double and triple letter combinations
+
+    # create template combinations
+    combinations_word_one = []
+    combinations_word_two = []
+
+    string_one_length = len(string_one)
+    string_two_length = len(string_two)
+
+    for i in range(string_one_length):
+        current_letter = string_one[i:i+1]
+        combinations_word_one.append(current_letter)
+    for i in range(string_one_length-1):
+        current_double = string_one[i:i+2]
+        combinations_word_one.append(current_double)
+    for i in range(string_one_length-2):
+        current_triple = string_one[i:i+3]
+        combinations_word_one.append(current_triple)
+
+    for i in range(string_two_length):
+        current_letter = string_two[i:i+1]
+        combinations_word_two.append(current_letter)
+    for i in range(string_two_length-1):
+        current_double = string_two[i:i+2]
+        combinations_word_two.append(current_double)
+    for i in range(string_two_length-2):
+        current_triple = string_two[i:i+3]
+        combinations_word_two.append(current_triple)
+
+    # print(combinations_word_one, "\n\n")
+    # print(combinations_word_two, "\n\n")
+
+    if method == 0:
+        # length comparison
+        score = - (len(string_one) - len(string_two))**2
+        # compare template combinations
+        for combination in combinations_word_one:
+            if combination in combinations_word_two:
+                score += len(combination)**2
+            else:
+                score -= 1
+        for combination in combinations_word_two:
+            if combination in combinations_word_one:
+                score += len(combination)**2
+            else:
+                score -= 1
+
+    if method == 1:
+        # length comparison
+        score = 0
+        # compare template combinations
+        for combination in combinations_word_one:
+            if combination in combinations_word_two:
+                score += len(combination)**2
+        for combination in combinations_word_two:
+            if combination in combinations_word_one:
+                score += len(combination)**2
+
+    print(string_one, string_two, score)
+    return score
 def catch_bad_eco_mode(expected_autopilot_status):
     time.sleep(5)
     return
@@ -803,9 +1098,14 @@ def device_update_cs():
     CS_image = Image.open(path + 'screen.png')
     CS_image = np.array(CS_image, dtype=np.uint8)
 # specialized
+def device_click_filter_block_reset():
+    device_click_rectangle(471, 434, 20, 7)
 def device_click_filter_block():
     print('\t\t\tdevice_click_filter_block()')
-    device_click_rectangle(740, 46, 161, 269)
+    global filter_block_click_time
+    if time.time() - filter_block_click_time > 3:
+        filter_block_click_time = time.time()
+        device_click_rectangle(740, 46, 161, 198)
 def close_select_target_popup():
     if compare_colors(get_cs_cv()[67][627], [83, 91, 46, 255]) < 2 and \
          compare_colors(get_cs_cv()[38][627], [83, 91, 46, 255]) < 4:
@@ -839,6 +1139,8 @@ def close_pop_ups():
 # TASKS
 # construction blocks for combined tasks or algorithms
 # short
+def click_tar_cross_location():
+    device_click_circle(598, 344, 16)
 def activate_filter_window():
     x, y = 923, 302
     # match was about 0.22, no match was 0.64, match = need fix
@@ -885,6 +1187,7 @@ def dump_both():
 
     # click on close
     device_click_circle(926, 30, 10)
+
 def dump_ore():
     print('\t\tdump_ore()')
     open_inventory()
@@ -902,6 +1205,12 @@ def dump_ore():
     time.sleep(5)
     # click on close
     device_click_circle(926, 30, 10)
+    time.sleep(1.5)
+    if not get_is_in_station():
+        # click on close
+        device_click_circle(926, 30, 10)
+        time.sleep(1)
+        device_click_circle(926, 30, 10)
 def dump_tail():
     print('\t\t\tdump_tail()')
     # select all
@@ -922,7 +1231,8 @@ def dump_tail():
 def activate_autopilot(force_click=0):
     print('\t\tactivate_autopilot()', force_click)
     if force_click:
-        device_click_circle(19, 127, 10)
+        device_click_rectangle(4,112,28,29)
+
         return
     if get_autopilot():
         if not get_autopilot_active():
@@ -940,11 +1250,22 @@ def activate_module(module):
         device_click_circle(module[2], module[3], module_icon_radius)
         return 1
     return 0
-def activate_the_modules(its_name):
+def activate_the_modules(its_name, slow_but_precise=0):
     print('\t\tactivate_modules()', its_name)
     tmp = 0
+    modules_to_activate = []
     for module in ModuleList:
         if module[1] == its_name:
+            if slow_but_precise:
+                if not get_module_is_active(module):
+                    modules_to_activate.append(module)
+            else:
+                if activate_module(module):
+                    tmp = 1
+    if slow_but_precise:
+        time.sleep(1.5)
+        device_update_cs()
+        for module in modules_to_activate:
             if activate_module(module):
                 tmp = 1
     return tmp
@@ -976,7 +1297,7 @@ def repair(desired_hp):
                 activate_module(module)
             else:
                 deactivate_module(module)
-def set_filter(string_in_name, force):
+def set_filter(string_in_name, force=0, list_number=10 ):
     print('\t\tset_filter() ', string_in_name, force)
     # swaps to a filter containing the given string
     if activate_filter_window():
@@ -991,25 +1312,31 @@ def set_filter(string_in_name, force):
     if string_in_name not in tess.image_to_string(crop_img) or force:
         # TODO: improve
         device_click_rectangle(x, y, w, h)
-        if string_in_name in 'Anomalies':
-            device_click_rectangle(x, y_first_option, w, h)
-            return
-        if string_in_name in 'PvE':
-            device_click_rectangle(x, y_first_option + y_off, w, h)
-            return
-        if string_in_name in 'esc':
-            device_click_rectangle(731, 338, 180, 45)
-            device_update_cs()
-            if check_for_confirm_window():
-                time.sleep(2)
-                device_click_rectangle(731, 338, 180, 45)
-            return
-        if string_in_name in 'Mining':
-            device_click_rectangle(731, 286, 180, 45)
-            return
+        if list_number < 6:
+            device_click_rectangle(x, y_first_option + y_off*list_number, w, h)
         else:
-            print('todo swap filter')
-        set_filter(string_in_name, force)
+            if string_in_name in 'Anomalies':
+                device_click_rectangle(x, y_first_option, w, h)
+                return
+            if string_in_name in 'PvE':
+                device_click_rectangle(x, y_first_option + y_off, w, h)
+                return
+            if string_in_name in 'esc':
+                device_click_rectangle(731, 338, 180, 45)
+                device_update_cs()
+                if check_for_confirm_window():
+                    time.sleep(2)
+                    device_click_rectangle(731, 338, 180, 45)
+                return
+            if string_in_name in 'Mining':
+                device_click_rectangle(731, 286, 180, 45)
+                return
+            if string_in_name in 'Nav':
+                device_click_rectangle(731, 181, 143, 42)
+                return
+            else:
+                print('todo swap filter')
+            set_filter(string_in_name, force)
     # cv.imshow('.', crop_img)
     # cv.waitKey()
 # longer
@@ -1197,7 +1524,8 @@ def undock():
 
 # COMBINED TASKS
 # todo add quit notification
-def undock_and_modules(error_count=0):
+def undock_and_modules(error_count=0, expected_modules=1):
+    print('expected mod value', expected_modules)
     print('\tundock_and_modules()')
     # set destination
     # set_system(planet)
@@ -1215,7 +1543,7 @@ def undock_and_modules(error_count=0):
     # sometimes the speed meter gets broken, redock to fix
     device_update_cs()
     update_modules()
-    if len(ModuleList) == 0:
+    if len(ModuleList) == 0 and expected_modules == 1:
         if error_count == 5:
             save_screenshot('kill')
             log(get_name() + ' got destroyed. ')
@@ -1233,7 +1561,7 @@ def undock_and_modules(error_count=0):
         undock_and_modules(error_count+1)
     speed_x, speed_y = 460, 495
     print('speed-o-meter value: ', get_cs_cv()[speed_y][speed_x][2])
-    if get_cs_cv()[speed_y][speed_x][2] < 130 or len(ModuleList) < 2:
+    if get_cs_cv()[speed_y][speed_x][2] < 130 or (len(ModuleList) < 2 and expected_modules == 1):
         # re dock
         time.sleep(10)
         observer_update()
@@ -1248,7 +1576,7 @@ def undock_and_modules(error_count=0):
     print('calibrating')
     # sometimes there is a sentry in the way, gotta wait for space target to vanish
 # todo eco mode catch unstable
-def warp_in_system(target_nbr, distance, should_set_home, desired_filter):
+def warp_in_system(target_nbr, distance, should_set_home, desired_filter=0):
     print('\twarp_in_system()', target_nbr, distance, should_set_home, desired_filter)
     # the filter has to be set correctly, list cannot be scrolled, no planets/ stations, eco must be off
     # returns : 0 fine: 1 found pirates, 2:
@@ -1267,7 +1595,8 @@ def warp_in_system(target_nbr, distance, should_set_home, desired_filter):
         filter_action(target_nbr, 2, 2)
         filter_action(2, 2, 2)
 
-    set_filter(desired_filter, 1)
+    if desired_filter != 0:
+        set_filter(desired_filter, 1)
 
     time.sleep(2)
     return warp_wait_trouble_fix_extension(should_set_home)

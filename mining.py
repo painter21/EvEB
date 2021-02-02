@@ -243,9 +243,6 @@ def mining_from_station():
         #     "start cmd /c E:\Eve_Echoes\Bot\EveB\\venv\Scripts\python.exe E:\Eve_Echoes\Bot\EveB\mining.py & pause")
         # quit()
 
-    if get_cargo() > 10:
-        dump_ore()
-
     undock_and_modules()
     activate_filter_window()
     time.sleep(1)
@@ -540,10 +537,12 @@ def mining_from_station_in_null():
 
 # STARTS
 def main():
+    if get_cargo() > 10:
+        dump_ore()
     mining_from_station()
 def custom():
     device_update_cs()
-    get_cargo()
+    print(get_cargo())
 
 
 read_config_file()

@@ -26,7 +26,31 @@ def main():
             time.sleep(20)
         time.sleep(3)
 
+def bubble():
+    while 1:
+        device_click_circle(920, 430, 10)
+        time.sleep(32)
+        device_click_circle(920, 430, 10)
+        time.sleep(47)
+
+def scouting():
+    while 1:
+        device_update_cs()
+        if get_filter_icon('cruiser') or get_filter_icon('battlecruiser') or get_filter_icon('industrial'):
+            ding_when_ganked()
+            save_screenshot()
+            time.sleep(10)
+            '''save_screenshot()
+            time.sleep(2)
+            save_screenshot()'''
+        time.sleep(0.5)
 
 read_config_file()
 config_uni()
-main()
+
+if get_start() == 'main':
+    main()
+if get_start() == 'bubble':
+    bubble()
+if get_start() == 'scouting':
+    scouting()

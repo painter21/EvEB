@@ -144,7 +144,6 @@ def get_list_anomaly():
     device_update_cs()
     list_ano = []
 
-
     # create a list of all anomaly locations (on screen)
     x, y, w, h = 729, 51, 14, 475
     img_ano = cv.imread(Path_to_script + 'assets\\filter_icons\\ano_left.png')
@@ -437,7 +436,8 @@ def combat():
 
             # cd items
             if tmp_cd < time.time():
-                if activate_the_modules('cd') or activate_the_modules('ewar'):
+                ewar, cd = activate_the_modules('ewar'), activate_the_modules('cd')
+                if ewar or cd:
                     tmp_cd = time.time() + 90
                     # 0815 ewar
 
@@ -492,7 +492,10 @@ def combat_return(got_ganked):
 
 # STARTS
 def main():
-    combat_start_from_station()
+    if get_is_in_station():
+        combat_start_from_station()
+    else:
+        combat_start_from_system()
 def custom():
     update_modules()
     time.sleep(2)
