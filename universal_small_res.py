@@ -106,6 +106,7 @@ if 1:
     name = ''
     home = 0
     bait = 0
+    local_jump = 0
     time_farming = time.time()
     filter_block_click_time = time.time() -10
     # connect to Bluestacks
@@ -218,14 +219,51 @@ def config_uni():
 # READING
 # everything that reads the screen and returns something
 # fast
+def read_local(number=2):
+    print('\t\t\tread_local')
+    lowest_score = 100000000
+    whitelist = ['Paul Painter', 'Hema Asterad']
+    for i in range(number):
+        # todo
+        x, y, w, h, y_off = 52, 230, 96, 23, 64
+        crop_img = image_remove_dark(CS_cv[y + y_off*i:y + h+y_off*i, x:x + w], 130)
+        text_img = image_remove_dark(crop_img, 200)
+        raw_text = tess.image_to_string(text_img)
+        raw_text = raw_text.strip().replace("\n", "")
+        # show_image(text_img, 1)
+        # print(raw_text)
+        best_match = 0
+        for name in whitelist:
+            tmp_score = compare_strings(name, raw_text)
+            # print(tmp_score)
+            if tmp_score > best_match:
+                best_match = tmp_score
+        if best_match < lowest_score:
+            lowest_score = best_match
+    print('\t\t\t\t', lowest_score)
+    if lowest_score > 150:
+        return 0
+    return 1
 def get_local_count():
+    global local_jump
     # differs between 1 and 2 in local
     print('\t\tget_local_count(): ')
     x, y, w, h = 26, 432, 46, 25
     crop_img = image_remove_dark(CS_cv[y:y + h, x:x + w], 130)
     image_local_one = cv.imread(path_to_script + 'assets\\local_one.png')
+    image_local_two = cv.imread(path_to_script + 'assets\\local_two.png')
     if image_compare_text(crop_img, image_local_one) > 30:
-        return 2
+        if image_compare_text(crop_img, image_local_two) > 30:
+            return 2
+        else:
+            if read_local():
+                return 2
+            else:
+                if local_jump == 0:
+                    ding_when_ganked()
+                    local_jump = 1
+    else:
+        local_jump = 0
     return 1
 def get_hp():
     health_str, health_arm, health_shi = 0, 0, 0
@@ -395,7 +433,7 @@ def get_inventory_open():
 # slow
 def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
     print('\t\tget_list_anomaly()')
-    print(ignore_scouts, ignore_inquis)
+    print('\t\t\tignore scouts, ingnore inquis: ', ignore_scouts, ignore_inquis)
 
     if anom_icon_must_be_clicked:
         current_anomaly_icon_location = get_filter_icon("anomaly")
@@ -420,7 +458,7 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
     # filter swap should not be nessessary, only warp to ano calls it anyways
     time.sleep(0.5)
     list_ano = []
-    filter_list_nr = 0
+    filter_list_nr = - 1
     for point in filter_list:
         # generate code
         code = []
@@ -431,7 +469,7 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
                 for color in pixel:
                     score += color
             code.append(score)
-        print(code)
+        # print(code)
 
         filter_list_nr += 1
         x_text = point[0] + 5
@@ -473,7 +511,7 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
         else:
             if compare_strings('Deadspace', size_text, 1) > margin:
                 device_click_filter_block()
-                save_screenshot()
+                # save_screenshot()
                 list_ano.append(['deadspace', code, filter_list_nr, lvl, base_anom])
                 for i in range(5):
                     ding_when_ganked()
@@ -482,19 +520,19 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
                     time.sleep(2)
             else:
                 if compare_strings('Inqusi', size_text, 1) > margin:
-                    save_screenshot()
                     list_ano.append(['inquisitor', code, filter_list_nr, lvl, base_anom])
                     if ignore_inquis == 0:
+                        save_screenshot()
                         ding_when_ganked()
                 else:
                     if compare_strings('Scout', size_text, 1) > margin:
                         print('found scout: ', raw_text)
-                        list_ano.append(['scout', lvl, filter_list_nr])
+                        list_ano.append(['scout', code, filter_list_nr, lvl, base_anom])
                         if ignore_scouts == 0:
                             ding_when_ganked()
-                        # time.sleep(5)
-                        # device_click_filter_block()
-                        save_screenshot()
+                            # time.sleep(5)
+                            # device_click_filter_block()
+                            save_screenshot()
                     else:
                         if compare_strings('Small', size_text, 1) > margin:
                             list_ano.append(['small', code, filter_list_nr, lvl, base_anom])
@@ -505,7 +543,7 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
                                 if compare_strings('Large', size_text, 1) > margin or compare_strings('Lorge', size_text, 1) > margin:
                                     list_ano.append(['large', code, filter_list_nr, lvl, base_anom])
                                 else:
-                                    if compare_strings('Base', base_text, 1) > margin/3 or compare_strings('Ras', 1) > margin/3:
+                                    if compare_strings('Base', base_text, 1) > margin/3 or compare_strings('Ras', base_text, 1) > margin/3:
                                         list_ano.append(['base', code, filter_list_nr, lvl, base_anom])
                                     else:
                                         list_ano.append(['unknown', code, filter_list_nr, lvl, base_anom])
@@ -722,7 +760,7 @@ def save_screenshot(name_of_image=None):
         with open('z' + str(now.hour) + '_' + str(now.minute) + '_' + str(now.second) + '.png', 'wb') as h:
             h.write(CS)
     else:
-        with open(name_of_image + '.png', 'wb') as h:
+        with open(str(name_of_image) + '.png', 'wb') as h:
             h.write(CS)
 def ding_when_ganked():
     print('\t\tding_when_ganked() ', ding_when_ganked)
@@ -839,14 +877,14 @@ def image_compare(image1, image2, threshold=0):
 
     diff = 0
     count = 0
-
-    if image2 == 'black':
-        for row in image1:
-            for pixel in row:
-                for color in pixel:
-                    diff += max(abs(int(pixel[2]) - threshold), 0)
-                    count += 1
-        return int(diff / count)
+    if isinstance(image2, str):
+        if image2 == 'black':
+            for row in image1:
+                for pixel in row:
+                    for color in pixel:
+                        diff += max(abs(int(pixel[2]) - threshold), 0)
+                        count += 1
+            return int(diff / count)
 
     row_count = -1
     for row in image1:
@@ -1047,7 +1085,7 @@ def compare_strings(string_one, string_two, method=0):
             if combination in combinations_word_one:
                 score += len(combination)**2
 
-    print(string_one, string_two, score)
+    # print(string_one, string_two, score)
     return score
 def catch_bad_eco_mode(expected_autopilot_status):
     time.sleep(5)
@@ -1099,7 +1137,7 @@ def device_update_cs():
     CS_image = np.array(CS_image, dtype=np.uint8)
 # specialized
 def device_click_filter_block_reset():
-    device_click_rectangle(471, 434, 20, 7)
+    device_click_rectangle(471, 430, 20, 8)
 def device_click_filter_block():
     print('\t\t\tdevice_click_filter_block()')
     global filter_block_click_time
@@ -1593,13 +1631,12 @@ def warp_in_system(target_nbr, distance, should_set_home, desired_filter=0):
         device_swipe_from_circle(dd_x + 50, min(tar_y + tar_off_y * target_nbr, 540 - 2 * 57 + 5) + 10 + dd_off_y * action_nbr, 25, distance, 2)
     else:
         filter_action(target_nbr, 2, 2)
-        filter_action(2, 2, 2)
 
     if desired_filter != 0:
         set_filter(desired_filter, 1)
 
     time.sleep(2)
-    return warp_wait_trouble_fix_extension(should_set_home)
+    # return warp_wait_trouble_fix_extension(should_set_home)
 def warp_wait_trouble_fix_extension(should_set_home):
     print('\twarp_wait_trouble_fix_extension()')
     # autopilot is active and warp is initiated, checking for safe landing and eco mode trouble, if autopilot set
