@@ -45,6 +45,20 @@ def scouting():
             save_screenshot()'''
         time.sleep(0.5)
 
+def just_rep():
+    update_modules()
+
+    while 1:
+        repair(80)
+        if get_cap() < 20:
+            ding_when_ganked()
+        if get_hp()[0] < 30:
+            ding_when_ganked()
+            time.sleep(4)
+        if get_tar_cross():
+            click_tar_cross_location()
+        device_update_cs()
+
 read_config_file()
 config_uni()
 
@@ -54,3 +68,5 @@ if get_start() == 'bubble':
     bubble()
 if get_start() == 'scouting':
     scouting()
+if get_start() == 'rep':
+    just_rep()

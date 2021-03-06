@@ -222,7 +222,7 @@ def config_uni():
 def read_local(number=2):
     print('\t\t\tread_local')
     lowest_score = 100000000
-    whitelist = ['Paul Painter', 'Hema Asterad']
+    whitelist = ['Paul Painter', 'Hema Asterad', 'Howe isyourday'] #
     for i in range(number):
         # todo
         x, y, w, h, y_off = 52, 230, 96, 23, 64
@@ -235,13 +235,15 @@ def read_local(number=2):
         best_match = 0
         for name in whitelist:
             tmp_score = compare_strings(name, raw_text)
+            # print('\t\t\t\t' + name, ' ', tmp_score)
             # print(tmp_score)
             if tmp_score > best_match:
                 best_match = tmp_score
+            # print('\t\t\t\t' , tmp_score)
         if best_match < lowest_score:
             lowest_score = best_match
     print('\t\t\t\t', lowest_score)
-    if lowest_score > 150:
+    if lowest_score > 135:
         return 0
     return 1
 def get_local_count():
@@ -345,17 +347,16 @@ def get_cargo():
     print('\t\t\tget_cargo(): ', 0)
     return 0
 def get_autopilot():
-    x_a, y_a, x_b, y_b = 43, 112, 43, 137
-    # add_rectangle(x_a, y_a, 0, 3)
-    # add_rectangle(x_b, y_b, 0, 3)
+    x_c, y_c = 23, 122
+    # add_point(x_c, y_c)
     # show_image()
-    # check if autopilot is online (2 pixels because safety)
-    if compare_colors(CS_image[y_a][x_a], outer_autopilot_green) < 10 and \
-            compare_colors(CS_image[y_b][x_b], outer_autopilot_green) < 10:
-        print('\t\t\tget_autopilot(): ', 1)
-        return 1
-    print('\t\t\tget_autopilot(): ', 0)
-    return 0
+    black = [15, 20, 15]
+    # is usually 0 with black, 45 with autopilot active
+    if compare_colors(CS_image[y_c][x_c], black) < 13 and compare_colors(CS_image[y_c + 1][x_c], black) < 13:
+        print('\t\t\tget_autopilot(): ', 0)
+        return 0
+    print('\t\t\tget_autopilot(): ', 1)
+    return 1
 def get_gate_cloak():
     x_a, y_a, x_b, y_b = 479, 377, 479, 379
     gate_cloak_green = [60, 200, 167, 255]
@@ -371,14 +372,16 @@ def get_gate_cloak():
     print('\t\t\tget_gate_cloak(): ', 0)
     return 0
 def get_autopilot_active():
-    x_c, y_c = 22, 130
+    x_c, y_c = 23, 131
     # add_point(x_c, y_c)
     # show_image()
-    if compare_colors(CS_image[y_c][x_c], inner_autopilot_green) < 13:
-        print('\t\t\tget_autopilot_active(): ', 1)
-        return 1
-    print('\t\t\tget_autopilot_active(): ', 0)
-    return 0
+    black = [15, 20, 15]
+    # is usually 2 with black, 61 with autopilot active
+    if compare_colors(CS_image[y_c][x_c], black) < 13 and compare_colors(CS_image[y_c + 1][x_c], black) < 13:
+        print('\t\t\tget_autopilot_active(): ', 0)
+        return 0
+    print('\t\t\tget_autopilot_active(): ', 1)
+    return 1
 def get_is_capsule():
     print('\t\t\tget_is_capsule(): start')
     tmp_module_list = []
@@ -439,6 +442,7 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
         current_anomaly_icon_location = get_filter_icon("anomaly")
         if current_anomaly_icon_location == 0:
             time.sleep(10)
+            close_select_target_popup(1)
             current_anomaly_icon_location = get_filter_icon('anomaly')
             if current_anomaly_icon_location == 0:
                 return 0
@@ -450,7 +454,6 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
     # click filter element to expand filter
 
     if not just_visible:
-        device_click_filter_block()
         filter_list = get_filter_pos()
     else:
         filter_list = get_filter_pos(0)
@@ -507,27 +510,22 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
         base_anom = 0
         margin = 35
         if compare_strings('Base', base_text, 1) > margin or compare_strings('Ras', base_text, 1) > margin:
-            list_ano.append(['base', code, filter_list_nr, lvl, base_anom])
+            list_ano.append(['base', code, filter_list_nr, lvl, base_anom, 0])
         else:
             if compare_strings('Deadspace', size_text, 1) > margin:
                 device_click_filter_block()
                 # save_screenshot()
-                list_ano.append(['deadspace', code, filter_list_nr, lvl, base_anom])
-                for i in range(5):
-                    ding_when_ganked()
-                    ding_when_ganked()
-                    ding_when_ganked()
-                    time.sleep(2)
+                list_ano.append(['deadspace', code, filter_list_nr, lvl, -1, 0])
             else:
                 if compare_strings('Inqusi', size_text, 1) > margin:
-                    list_ano.append(['inquisitor', code, filter_list_nr, lvl, base_anom])
+                    list_ano.append(['inquisitor', code, filter_list_nr, lvl, -1, 0])
                     if ignore_inquis == 0:
                         save_screenshot()
                         ding_when_ganked()
                 else:
                     if compare_strings('Scout', size_text, 1) > margin:
                         print('found scout: ', raw_text)
-                        list_ano.append(['scout', code, filter_list_nr, lvl, base_anom])
+                        list_ano.append(['scout', code, filter_list_nr, lvl, -1, 0])
                         if ignore_scouts == 0:
                             ding_when_ganked()
                             # time.sleep(5)
@@ -535,26 +533,24 @@ def get_list_anomaly(just_visible=0, anom_icon_must_be_clicked=1):
                             save_screenshot()
                     else:
                         if compare_strings('Small', size_text, 1) > margin:
-                            list_ano.append(['small', code, filter_list_nr, lvl, base_anom])
+                            list_ano.append(['small', code, filter_list_nr, lvl, base_anom, 0])
                         else:
                             if compare_strings('Medium', size_text, 1) > margin:
-                                list_ano.append(['medium', code, filter_list_nr, lvl, base_anom])
+                                list_ano.append(['medium', code, filter_list_nr, lvl, base_anom, 0])
                             else:
                                 if compare_strings('Large', size_text, 1) > margin or compare_strings('Lorge', size_text, 1) > margin:
-                                    list_ano.append(['large', code, filter_list_nr, lvl, base_anom])
+                                    list_ano.append(['large', code, filter_list_nr, lvl, base_anom, 0])
                                 else:
                                     if compare_strings('Base', base_text, 1) > margin/3 or compare_strings('Ras', base_text, 1) > margin/3:
-                                        list_ano.append(['base', code, filter_list_nr, lvl, base_anom])
+                                        list_ano.append(['base', code, filter_list_nr, lvl, base_anom, 0])
                                     else:
-                                        list_ano.append(['unknown', code, filter_list_nr, lvl, base_anom])
+                                        list_ano.append(['unknown', code, filter_list_nr, lvl, base_anom, 0])
                                         print('unknown anom: ', raw_text)
                                         # playsound(Path_to_script + 'assets\\sounds\\bell.wav')
                                         # show_image(text_img, 1)
                                         # time.sleep(5)
 
             # print(list_ano[-1])
-    for ano in list_ano:
-        print(ano[0])
     return list_ano
 def get_filter_icon(filter_name):
     print('\t\tget_filter_icon(): ', filter_name)
@@ -616,8 +612,8 @@ def get_filter_pos(have_to_click_filter_block=1):
 def get_is_locked(target):
     target -= 1
     # if target = 0
-    if target == 1:
-        x, y, h = 629, 32, 12
+    if target != 0:
+        x, y, h = 629-61*target, 32, 12
         pix_not_gray = 0
         for i in range(h):
             if abs(int(CS_cv[y + i][x][0]) - CS_cv[y + i][x][1]) > 4 or \
@@ -677,15 +673,18 @@ def get_module_is_active(module):
     # todo: actie modules will pass deactiv test aswell as active test
     if module[1] == 'drone':
         # i doubt always getting the perfect center for drone modules, so we have to look out for the cross
-        for i in range(5):
-            x, y, h = module[2] - 22 + i, module[3] - 27, 19
-            pix_not_green = 0
-            for i in range(h):
-                for c in range(3):
-                    if CS_cv[y + i][x][c] < 135:
-                        pix_not_green += 1
-            if pix_not_green < 9:
-                return 1
+        for i in range(4):
+            device_update_cs()
+            for i in range(5):
+                x, y, h = module[2] - 22 + i, module[3] - 27, 19
+                pix_not_green = 0
+                for i in range(h):
+                    for c in range(3):
+                        if CS_cv[y + i][x][c] < 135:
+                            pix_not_green += 1
+                if pix_not_green < 9:
+                    return 1
+                time.sleep(0.5)
         return 0
     activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
@@ -768,7 +767,7 @@ def ding_when_ganked():
         playsound(path_to_script + 'assets\\sounds\\bell.wav')
 def log(something_to_write, link='E:\\Eve_Echoes\\Bot\\professional_database.txt'):
     absolutely_professional_database = open(link, 'a')
-    absolutely_professional_database.write(something_to_write + "\n\n")
+    absolutely_professional_database.write(something_to_write + "\n")
     absolutely_professional_database.close()
 def observer_update():
     print('\t\tobserver_update()')
@@ -835,7 +834,7 @@ def compare_colors(a, b):
     thi = abs(int(a[2]) - int(b[2]))
     return int((fir + sec + thi) / 7.5)
 def image_remove_dark(image, border):
-    print('\t\t\timage_remove_dark() ')
+    # print('\t\t\timage_remove_dark() ')
     # remove darker pixels
     row_count = -1
     for row in image:
@@ -985,12 +984,13 @@ def filter_action(target_nbr, action_nbr, expected_list_size):
     target_nbr -= 1
     action_nbr -= 1
     tar_x, tar_y, w, h, tar_off_y = 742, 47, 157, 37, 52
-    dd_x, dd_off_y = 539, 57
+    dd_x, dd_off_y = 550, 57
     device_click_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
+    time.sleep(0.5)
     # device_update_cs()
     # add_rectangle(tar_x, tar_y + tar_off_y * target_nbr, w, h)
     # add_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57) + dd_off_y * action_nbr, 170, 47)
-    device_click_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57 + 5) + dd_off_y * action_nbr, 170, 47)
+    device_click_rectangle(dd_x, min(tar_y + tar_off_y * target_nbr, 540 - expected_list_size * 57 + 5) + dd_off_y * action_nbr, 159, 47)
     # show_image(0, 0)
     return
 def filter_swipe(direction):
@@ -1143,11 +1143,14 @@ def device_click_filter_block():
     global filter_block_click_time
     if time.time() - filter_block_click_time > 3:
         filter_block_click_time = time.time()
-        device_click_rectangle(740, 46, 161, 198)
-def close_select_target_popup():
+        device_click_rectangle(756, 102, 142, 85)
+def close_select_target_popup(forced=0):
+    if forced:
+        device_click_circle(883, 54, 10)
+        return
     if compare_colors(get_cs_cv()[67][627], [83, 91, 46, 255]) < 2 and \
          compare_colors(get_cs_cv()[38][627], [83, 91, 46, 255]) < 4:
-        device_click_circle(883, 54, 16)
+        device_click_circle(883, 54, 10)
         time.sleep(1)
         device_update_cs()
 def close_pop_ups():
@@ -1277,10 +1280,13 @@ def activate_autopilot(force_click=0):
             device_click_circle(19, 127, 10)
             return
 # todo does sometimes get info window in eco mode
-def activate_module(module):
+def activate_module(module, forced=0):
     print('\t\tactivate_module()', module[0])
     activate_blue, activate_red = [206, 253, 240, 255], [250, 253, 216, 255]
     x, y = module[2] + 2, module[3] - module_icon_radius
+    if forced:
+        device_click_circle(module[2], module[3], module_icon_radius)
+        return 1
     if module[1] == 'esc':
         device_click_circle(module[2], module[3], module_icon_radius)
     # print('\t\t\t', get_module_is_active(module), compare_colors(CS_image[y][x], activate_red), CS_image[y][x])
@@ -1288,19 +1294,26 @@ def activate_module(module):
         device_click_circle(module[2], module[3], module_icon_radius)
         return 1
     return 0
-def activate_the_modules(its_name, slow_but_precise=0):
+def activate_the_modules(its_name, mode=0):
+    # = check if module is running, 1 = check long, 2: forced, dont check, just click
     print('\t\tactivate_modules()', its_name)
     tmp = 0
     modules_to_activate = []
     for module in ModuleList:
         if module[1] == its_name:
-            if slow_but_precise:
-                if not get_module_is_active(module):
-                    modules_to_activate.append(module)
-            else:
+
+            if mode == 0:
                 if activate_module(module):
                     tmp = 1
-    if slow_but_precise:
+
+            if mode == 1:
+                if not get_module_is_active(module):
+                    modules_to_activate.append(module)
+
+            if mode == 2:
+                activate_module(module, 1)
+                tmp = 1
+    if mode == 1:
         time.sleep(1.5)
         device_update_cs()
         for module in modules_to_activate:
