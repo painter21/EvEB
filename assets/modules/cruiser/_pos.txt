@@ -13,6 +13,7 @@ weapon2 weapon 6 7
 weapon3 weapon 13 10
 medexplodrone11	drone 4 8
 medrocket12 weapon 8 13
+medrapid12 weapon 9 16
 drone3 drone 7 17
 painter laser 16 4
 tracking2 cd 13 11

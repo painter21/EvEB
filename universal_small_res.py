@@ -262,7 +262,7 @@ def get_local_count():
                 return 2
             else:
                 if local_jump == 0:
-                    ding_when_ganked()
+                    play_sound(3)
                     local_jump = 1
     else:
         local_jump = 0
@@ -761,6 +761,13 @@ def save_screenshot(name_of_image=None):
     else:
         with open(str(name_of_image) + '.png', 'wb') as h:
             h.write(CS)
+def play_sound(number=0):
+    print('\t\tplay_sound() ', number)
+    count = 0
+    for sound_file in os.listdir(path_to_script + 'assets\\sounds\\'):
+        count += 1
+        if count == number:
+            playsound(path_to_script + 'assets\\sounds\\' + sound_file)
 def ding_when_ganked():
     print('\t\tding_when_ganked() ', ding_when_ganked)
     if ding == 1:

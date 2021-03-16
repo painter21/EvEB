@@ -45,8 +45,9 @@ if 1:
     ano_spawned_in_warp_to_time = -2
     selective_index = [-1, 0, 0, 0, 0, 0, 0]
     deltatime = 0
+    max_list = 7
 
-# anomalies are saved as following: [size, code, filter_list_nbr, level, age, spawn_time]
+# anomalies are saved as following: [size, code, filter_list_nbr, level, age, spawn_time, ([ano_index, lowest_score])]
 
 # simple small tasks
 
@@ -167,7 +168,7 @@ def choose_anomaly():
                 if safe_ano_list[index][4] + spawn_data[safe_ano_list[index][5]] * 5 >= best_ano[4] + spawn_data[best_ano[5]] * 5:
                     best_ano = safe_ano_list[index]
 
-    print_ano_list(safe_ano_list, 'safe_ano_list')
+    print_ano_list(safe_ano_list, 'safe_ano_list', [0, 4, 5], 1)
 
     return best_ano
 def set_auto_pilot_sequence():
@@ -189,12 +190,25 @@ def set_auto_pilot_sequence():
         time.sleep(3)
         activate_autopilot(1)'''
 
-def print_ano_list(ano_list, header='some_ano_list'):
-    print('\n' + header)
-    print('size, age, s_time, score')
+def print_ano_list(ano_list, header='some_ano_list', to_print=None, print_score=0):
+    if to_print is None:
+        to_print = [2]
+    name_list = ('name', 'code', 'nbr', 'lvl', 'age', 'spawn_time', 'match')
+    header2 = ''
+    context = ''
+    for index in to_print:
+        header2 += name_list[index] + ' '
     for ano in ano_list:
-        print(ano[0], ano[4], ano[5], ano[4] + spawn_data[ano[5]] * 5)
-        # print(ano[1])
+        for index in to_print:
+            context += str(ano[index]) + ' '
+        if print_score:
+            context += str(ano[4] + 3 * spawn_data[ano[5]])
+        context += '\n'
+    print('\n' + header)
+    print(header2)
+    print(context)
+
+
     print()
 def compare_ano_code(code1, code2):
     sum_code1 = 0
@@ -216,7 +230,7 @@ def find_best_match(ano, ano_list):
         if score < lowest_score:
             best_ano = ano1
             lowest_score = score
-    print(ano[2], ano_list.index(best_ano), lowest_score)
+    # print(ano[2], ano_list.index(best_ano), lowest_score)
     return ano_list.index(best_ano), lowest_score
 def update_safe_ano_list():
     print('\tupdate_safe_ano_list')
@@ -248,9 +262,65 @@ def update_safe_ano_list():
         print('\t\tjust started out')
         return
 
-    print_ano_list(new_ano_list, 'new ano list')
+    print_ano_list(new_ano_list, 'new ano list', [0], 0)
+
+    for ano in new_ano_list:
+
+        # check if ano is unknown. the site_ano list also contains previous spawns
+        # appending the score to check doubles in the end, finding matches
+        best_match = find_best_match(ano, safe_ano_list)
+        ano.append(best_match)
 
     unknown_anos = []
+    for ano_1 in new_ano_list:
+        no_double_matched_found = 1
+
+        for ano_2 in new_ano_list:
+
+            if (ano_1[2] != ano_2[2] and ano_2[6][0] == ano_1[6][0] and ano_1[6][1] > ano_2[6][1]) or ano_1[6][1] > 3000000:
+                # found a double matched pair
+                # ano_1 got the worse score -> ano 1 is new, ano 2 can be ignored, since it will get matched later
+                print('matched anos: ', ano_1[2], ano_2[2], ano_1[6][0], ano_2[6][0], ano_1[6][1])
+                no_double_matched_found = 0
+
+                # what to do with bad ano?
+                # first the obvious, did it spawn during warp to ano (changed variable)
+                if ano_spawned_in_warp_to_time != -2:
+                    print('\t\tunknown, but recent', ano_1[2])
+                    ano_1[5] = ano_spawned_in_warp_to_time
+                    if ano_1[0] == 'scout' or ano_1[0] == 'inquisitor' or ano_1[0] == 'deadspace':
+                        ding_when_ganked()
+                        ano_1[4] = -1
+                        log(ano_1[0] + ', ' + str(datetime.datetime.now()), 'log.txt')
+                        spawn_data[ano_spawned_in_warp_to_time] += 10
+
+                else:
+                    # did it spawn during warp back (no new spawns listed and variable for warp in has not changed)
+                    if len(new_ano_spawns) == 0:
+                        print('\t\tunknown, from recent warp in', ano_1[2])
+                        # the ano(s) mst have spawned in the warp to safe
+                        spawn_time = get_index_time()
+                        ano_1[5] = spawn_time
+                        save_screenshot()
+                        spawn_data[spawn_time] += 1
+                        if ano_1[0] == 'scout' or ano_1[0] == 'inquisitor' or ano_1[0] == 'deadspace':
+                            ding_when_ganked()
+                            ano_1[4] = -1
+                            log(ano_1[0] + ', ' + str(datetime.datetime.now()), 'log.txt')
+                            spawn_data[spawn_time] += 10
+
+                    else:
+                        unknown_anos.append(ano_1)
+                break
+        if no_double_matched_found:
+            old_matched_ano = safe_ano_list[ano_1[6][0]]
+            ano_1[5] = old_matched_ano[5]
+            ano_1[4] = old_matched_ano[4]
+            # if the name was not readable, take the last one
+            if ano_1[0] == 'unknown':
+                ano_1[0] = old_matched_ano[0]
+            print('\t\tknown', old_matched_ano[2], '->', ano_1[2])
+    '''
     for ano in new_ano_list:
         # first, check all anos in the new_ano_list if they are known from bevore
         best_match = find_best_match(ano, safe_ano_list)
@@ -292,13 +362,16 @@ def update_safe_ano_list():
 
                 else:
                     unknown_anos.append(ano)
-
+    '''
+    print_ano_list(unknown_anos, 'unknown anos', [0, 2])
+    print_ano_list(new_ano_spawns, 'new_ano_spawns', [0, 2])
     # if there is noting to do, there is nothing to do
     if len(unknown_anos) == 0:
         print('\t\tno unknown anomalies')
     else:
 
         # check if there is another unknown ano, polluting the solution, should not happen
+        # todo: can happen if ano spawns on way back adinside ao spawed one. should be easy fix
         if len(unknown_anos) != len(new_ano_spawns):
             print('\t\tspawned anomaly list incomplete')
 
@@ -306,7 +379,9 @@ def update_safe_ano_list():
             for ano in new_ano_list:
                 for unknown_ano in unknown_anos:
                     if ano[1] == unknown_ano[1]:
-                        ano[4] = 6
+                        # average score of spawn data
+                        ano[4] = int(sum(spawn_data)/2)
+                        ano[5] = 5
 
         else:
             print('\t\tspawned anomaly list complete')
@@ -323,8 +398,7 @@ def update_safe_ano_list():
                 new_ano_spawns_ordered.append(lowest_list_index_ano)
                 current_list_index = lowest_list_index
 
-            print_ano_list(unknown_anos, 'unknown aos')
-            print_ano_list(new_ano_spawns_ordered, 'ordered new spawns')
+            print_ano_list(new_ano_spawns_ordered, 'ordered new spawns', [0, 2])
 
             # now each match unknown and spawned anos
             for ano_index in range(len(unknown_anos)):
@@ -350,6 +424,8 @@ def update_safe_ano_list():
     link = 'current_ano_list.txt'
     to_write = ''
     for ano in new_ano_list:
+        # remove compare score
+        ano.pop()
         to_write += str(ano[0] + ' ' + str(ano[4]) + ' ' + str(ano[5])) + '\n'
     txt_file = open(link, 'w')
     txt_file.write(to_write)
@@ -363,7 +439,7 @@ def check_for_new_anos():
     print('\tupdate_site_ano_list')
     global site_ano_list
 
-    if len(site_ano_list) == 9:
+    if len(site_ano_list) == max_list:
         return
 
     new_ano_list = get_list_anomaly()
@@ -374,6 +450,7 @@ def check_for_new_anos():
             save_screenshot()
             global ano_spawned_in_warp_to_time
             ano_spawned_in_warp_to_time = get_index_time()
+            spawn_data[ano_spawned_in_warp_to_time] += 1
             print('spawn_time :', ano_spawned_in_warp_to_time)
             return_to_safespot_and_restart(ano_list_just_tested=1)
         else:
@@ -384,14 +461,31 @@ def check_for_new_anos():
     # every anomaly in the new list will be matched with the old list and the new_ano_spawns.
     # if it cant be found, it must be a new spawn
 
-    # todo: maybe remove paired ano from site_ano_list to avoid processing time
-    # todo: anos are still slipping past. its not rare to see an anom with little distance difference get matched wrongly
     something_changed = 0
-    matched_indices = []
     for ano in new_ano_list:
 
         # check if ano is unknown. the site_ano list also contains previous spawns
+        # appending the score to check doubles in the end, finding matches
         best_match = find_best_match(ano, site_ano_list)
+
+        # check if ano score is flat -> current ano needs to be ignored, only required if score is bad
+        code_flat = 0
+        if best_match[1] > ano_margin_score + 300000:
+            code_flat = 1
+            last_code_amplitude = ano[1][-1]
+            for i in range(1, 9):
+                if last_code_amplitude - ano[1][-i] < 25:
+                    last_code_amplitude = ano[1][-i]
+                else:
+                    code_flat = 0
+        if code_flat:
+            # todo: ano position is not findable and might give new ano space for issues
+            print(ano[0], code_flat, ano[1])
+            ano.append((ano[2]+10, 0))
+        else:
+            ano.append(best_match)
+
+        '''
         if best_match[1] > ano_margin_score + 300000 or (best_match[1] > ano_margin_score and ano[0] != site_ano_list[best_match[0]][0]):
 
             # check if it is the current ano (is the code flat in the end?)
@@ -434,7 +528,57 @@ def check_for_new_anos():
                 new_ano_spawns.append(ano)
                 print('\t\tnew spawn: ' + ano[0], ano[4])
                 # update list indicies of all anos in new_ano_spawn
+                '''
+
+    # todo: code not workig, aoms are ot recognized, even tough they are clearly new
+
+    print('\nList of anoms and their matches')
+    for ano in new_ano_list:
+        print(ano[2], ano[6][0], ano[6][1])
+    print('')
+
+    # check if two new ano got matched to an old one -> one is new
+    for ano_1 in new_ano_list:
+        for ano_2 in new_ano_list:
+            if (ano_1[2] != ano_2[2] and ano_2[6][0] == ano_1[6][0] and ano_1[6][1] > ano_2[6][1]) or ano_1[6][1] > 3000000:
+                # found a double matched pair, ano_1 is bad. Ano 2 can be ignored, will be matched later
+                something_changed = 1
+
+                # change matched list number, so it wont trigger again
+                ano_1[6] = (ano_1[6][0] + 10, 0)
+
+                # todo: old code still working?
+                print('\t\tnumber ', ano_1[2], 'seems to be new, spawn_time = ', datetime.datetime.now().minute % 10)
+
+                # must be a new spawn
+                # the current discovery time is considered the spawn time, check if its similar to other spawns
+                # these can be found in the spawn_data list, 0;1 min-> index 0, 2;3 min->index 1 and so on
+                spawn_time = get_index_time()
+                # check for enough spawns and add data
+
+                ano_1[5] = spawn_time
+
+                if ano_1[0] == 'unknown':
+                    ano_1[4] = -1
+                    spawn_data[spawn_time] += 1
+                    ding_when_ganked()
+                else:
+                    if ano_1[0] == 'scout' or ano_1[0] == 'inquisitor' or ano_1[0] == 'deadspace':
+                        ding_when_ganked()
+                        ano_1[4] = -1
+                        log(ano_1[0] + ', ' + str(datetime.datetime.now()), 'log.txt')
+                        spawn_data[spawn_time] += 10
+                    else:
+                        spawn_data[spawn_time] += 1
+
+                new_ano_spawns.append(ano_1)
+                print('\t\tnew spawn: ' + ano_1[0], ano_1[4])
+
     if something_changed:
+        # remove appended best matches
+        for ano in new_ano_list:
+            ano.pop()
+
         print('\t\tspawn_data: ', spawn_data)
         write_data(1)
         save_screenshot()
@@ -480,7 +624,7 @@ def danger_handling_combat():
     if get_hp()[1] < 30:
         device_update_cs()
         if get_hp()[1] < 30:
-            ding_when_ganked()
+            play_sound(3)
             log('interrupt: low_hp', 'log.txt')
             return_to_safespot_and_restart()
     if get_cap() < 10:
@@ -492,7 +636,7 @@ def danger_handling_combat():
             return_to_safespot_and_restart()
     if get_local_count() > 1:
         log('interrupt: visitors', 'log.txt')
-        ding_when_ganked()
+        play_sound(3)
         repair(100)
         time.sleep(5)
         device_update_cs()
@@ -595,8 +739,9 @@ def combat(ano_version="small"):
                 if wavecount == 1:
                     time_min_now = get_index_time()
                     print('\tcheck anoms ', time_min_now)
-                    check_for_new_anos()
-                    tmp_ano_check = time_min_now
+                    if get_start() != 'clear':
+                        check_for_new_anos()
+                        tmp_ano_check = time_min_now
                 else:
                     time.sleep(5)
 
@@ -630,18 +775,22 @@ def combat(ano_version="small"):
                 activate_the_modules('cd', 2)
                 tmp_cd = time.time()
 
-        time_min_now = get_index_time()
-        print('\tcheck anoms (now, last, npcs) ', time_min_now, tmp_ano_check, tmp_npc_count)
-        if (time_min_now > tmp_ano_check or (time_min_now < 2 and tmp_ano_check > 2)) and tmp_npc_count > 1:
-            print('\tchecking ', time_min_now, get_index_time(), tmp_ano_check)
-            tmp_ano_check = time_min_now
-            check_for_new_anos()
+        if get_start() != 'clear':
+            time_min_now = get_index_time()
+            print('\tcheck anoms (now, last, npcs) ', time_min_now, tmp_ano_check, tmp_npc_count)
+            if (time_min_now > tmp_ano_check or (time_min_now < 2 and tmp_ano_check > 2)) and tmp_npc_count > 1:
+                print('\tchecking ', time_min_now, get_index_time(), tmp_ano_check)
+                tmp_ano_check = time_min_now
+                check_for_new_anos()
 
         print('\tcheck if done')
         if not get_filter_icon('npc'):
             time.sleep(5)
             device_update_cs()
             if not get_filter_icon('npc'):
+
+                if get_start() == 'clear':
+                    quit()
 
                 # fly home and check anoms for a new spawn
                 log('finished ' + ano_version + ' ' + str(datetime.datetime.now()), 'log.txt')
@@ -737,6 +886,8 @@ def main():
 
     index = safe_ano_list.index(ano)
     time.sleep(5)
+    if get_local_count() > 1:
+        main()
     warp_in_system(index + 1, 0, 0)
     log('\t' + str(datetime.datetime.utcnow()+datetime.timedelta(hours=2)), 'log.txt')
     preparation()
@@ -747,7 +898,19 @@ def main():
     combat(ano[0])
     return
 def custom():
-    print(get_index_time())
+    play_sound(3)
+def clear():
+    if get_autopilot():
+        if get_autopilot_active():
+            time.sleep(1)
+            device_update_cs()
+            if get_autopilot_active():
+                activate_autopilot(1)
+    else:
+        set_auto_pilot_sequence()
+    combat()
+    return
+
 
 read_config_file()
 config_uni()
@@ -756,3 +919,5 @@ if get_start() == 'main':
     main()
 if get_start() == 'custom':
     custom()
+if get_start() == 'clear':
+    clear()
